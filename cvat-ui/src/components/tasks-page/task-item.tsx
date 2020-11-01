@@ -44,6 +44,7 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
         const { taskInstance } = this.props;
         const { id } = taskInstance;
         const owner = taskInstance.owner ? taskInstance.owner.username : null;
+        const assignee = taskInstance.assignee ? taskInstance.assignee.username : null;
         const updated = moment(taskInstance.updatedDate).fromNow();
         const created = moment(taskInstance.createdDate).format('MMMM Do YYYY');
 
@@ -60,6 +61,12 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                 {owner && (
                     <>
                         <Text type='secondary'>{`Created ${owner ? `by ${owner}` : ''} on ${created}`}</Text>
+                        <br />
+                    </>
+                )}
+                {assignee && (
+                    <>
+                        <Text type='secondary'>{`Assigned to ${assignee ? `${assignee}` : 'none'}`}</Text>
                         <br />
                     </>
                 )}
