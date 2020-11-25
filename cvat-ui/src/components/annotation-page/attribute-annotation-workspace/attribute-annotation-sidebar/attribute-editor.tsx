@@ -38,11 +38,19 @@ function renderInputElement(parameters: InputElementParameters): JSX.Element {
 
     const renderSelect = (): JSX.Element => (
         <>
-            <Text strong>Values: </Text>
             <div className='attribute-annotation-sidebar-attr-elem-wrapper'>
                 <Select
+                    showSearch
                     value={currentValue}
-                    style={{ width: '80%' }}
+                    style={{ width: '100%' }}
+                    filterOption={(input: string, option: React.ReactElement<OptionProps>) => {
+                        const { children } = option.props;
+                        if (typeof children === 'string') {
+                            return children.toLowerCase().includes(input.toLowerCase());
+                        }
+
+                        return false;
+                    }}
                     onChange={(value: SelectValue) => onChange(value as string)}
                 >
                     {values.map(
@@ -183,6 +191,8 @@ function renderList(parameters: ListParameters): JSX.Element | null {
         } = {};
 
         const filteredValues = values.filter((value: string): boolean => value !== consts.UNDEFINED_ATTRIBUTE_VALUE);
+        if (filteredValues.length > 7)
+            return null;
         filteredValues.slice(0, 10).forEach((value: string, index: number): void => {
             const key = `SET_${index}_VALUE`;
             keyMap[key] = {
