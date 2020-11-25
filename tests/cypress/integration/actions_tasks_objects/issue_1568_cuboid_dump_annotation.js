@@ -1,19 +1,17 @@
-/*
- * Copyright (C) 2020 Intel Corporation
- *
- * SPDX-License-Identifier: MIT
- */
+// Copyright (C) 2020 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
 
 /// <reference types="cypress" />
 
-import { taskName } from '../../support/const';
+import { taskName, labelName } from '../../support/const';
 
 context('Dump annotation if cuboid created', () => {
     const issueId = '1568';
     const createCuboidShape2Points = {
         points: 'From rectangle',
         type: 'Shape',
-        switchLabel: false,
+        labelName: labelName,
         firstX: 250,
         firstY: 350,
         secondX: 350,
