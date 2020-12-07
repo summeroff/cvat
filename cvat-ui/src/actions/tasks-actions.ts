@@ -93,7 +93,7 @@ export function getTasksAsync(query: TasksQuery): ThunkAction<Promise<void>, {},
         }
 
         const array = Array.from(result);
-        const promises = array.map((task): string => (task as any).frames.preview().catch(''));
+        const promises = array.map((task): string => (task as any).frames.preview().catch(() => ''));
 
         dispatch(getInferenceStatusAsync());
 
@@ -393,6 +393,9 @@ export function createTaskAsync(data: any): ThunkAction<Promise<void>, {}, {}, A
         }
         if (data.advanced.dataChunkSize) {
             description.data_chunk_size = data.advanced.dataChunkSize;
+        }
+        if (data.advanced.copyData) {
+            description.copy_data = data.advanced.copyData;
         }
 
         const taskInstance = new cvat.classes.Task(description);
