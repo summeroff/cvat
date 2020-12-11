@@ -146,7 +146,7 @@ def has_change_permissions(db_user, db_job):
 
 @rules.predicate
 def is_job_reviewer(db_user, db_job):
-    has_rights = db_job.reviewer == db_user
+    has_rights = db_job.reviewer == db_user & has_user_role
     return has_rights
 
 @rules.predicate
