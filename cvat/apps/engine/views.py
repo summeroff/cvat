@@ -434,7 +434,9 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             permissions.append(auth.TaskAccessPermission)
         elif http_method in ["POST"]:
             permissions.append(auth.TaskCreatePermission)
-        elif self.action == 'annotations' or http_method in ["PATCH", "PUT"]:
+        elif self.action == 'annotations':
+            permissions.append(auth.AdminRolePermission)
+        elif http_method in ["PATCH", "PUT"]:
             permissions.append(auth.TaskChangePermission)
         elif http_method in ["DELETE"]:
             permissions.append(auth.TaskDeletePermission)
@@ -449,6 +451,12 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
         if not is_admin and settings.RESTRICTIONS['task_limit'] is not None and \
             Task.objects.filter(owner=owner).count() >= settings.RESTRICTIONS['task_limit']:
             raise serializers.ValidationError('The user has the maximum number of tasks')
+
+    def _validate_export_limit(self, owner):
+        exporter_perm = auth.ExporterRolePermission()
+        is_exporter = exporter_perm.has_permission(self.request, self)
+        if not is_exporter:
+            raise serializers.ValidationError('The user cannot export annotation data')
 
     def create(self, request):
         action = self.request.query_params.get('action', None)
@@ -514,6 +522,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
     def retrieve(self, request, pk=None):
         db_task = self.get_object() # force to call check_object_permissions
         action = self.request.query_params.get('action', None)
+        self._validate_export_limit(owner=self.request.user)
         if action is None:
             return super().retrieve(request, pk)
         elif action in ('export', 'download'):
@@ -574,6 +583,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             serializer.save(owner=self.request.user)
 
     def perform_destroy(self, instance):
+        self._validate_export_limit(owner=self.request.user)
         task_dirname = instance.get_task_dirname()
         super().perform_destroy(instance)
         shutil.rmtree(task_dirname, ignore_errors=True)
@@ -752,6 +762,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
         serializer_class=LabeledDataSerializer)
     def annotations(self, request, pk):
         db_task = self.get_object() # force to call check_object_permissions
+        self._validate_export_limit(owner=self.request.user)
         if request.method == 'GET':
             format_name = request.query_params.get('format')
             if format_name:
@@ -880,7 +891,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
         url_path='dataset')
     def dataset_export(self, request, pk):
         db_task = self.get_object() # force to call check_object_permissions
-
+        self._validate_export_limit(owner=self.request.user)
         format_name = request.query_params.get("format", "")
         return _export_annotations(db_instance=db_task,
             rq_id="/api/v1/tasks/{}/dataset/{}".format(pk, format_name),
