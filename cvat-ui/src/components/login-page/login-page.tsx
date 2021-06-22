@@ -34,6 +34,7 @@ function LoginPageComponent(props: LoginPageComponentProps & RouteComponentProps
     const { fetching, onLogin, renderResetPassword } = props;
 
     return (
+
         <Layout>
             <Content>
                 <Row justify='center' align='middle' style={{ height: '100%' }}>
