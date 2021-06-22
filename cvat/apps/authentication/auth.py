@@ -75,6 +75,7 @@ has_admin_role = rules.is_group_member(str(AUTH_ROLE.ADMIN))
 has_user_role = rules.is_group_member(str(AUTH_ROLE.USER))
 has_annotator_role = rules.is_group_member(str(AUTH_ROLE.ANNOTATOR))
 has_observer_role = rules.is_group_member(str(AUTH_ROLE.OBSERVER))
+has_exporter_role = rules.is_group_member(str(AUTH_ROLE.EXPORTER))
 
 @rules.predicate
 def is_project_owner(db_user, db_project):
@@ -168,6 +169,7 @@ rules.add_perm('engine.role.user', has_user_role)
 rules.add_perm('engine.role.admin', has_admin_role)
 rules.add_perm('engine.role.annotator', has_annotator_role)
 rules.add_perm('engine.role.observer', has_observer_role)
+rules.add_perm('engine.role.exporter', has_exporter_role)
 
 rules.add_perm('engine.project.create', has_admin_role | has_user_role)
 rules.add_perm('engine.project.access', has_admin_role | has_observer_role |
@@ -216,6 +218,11 @@ class ObserverRolePermission(BasePermission):
     # pylint: disable=no-self-use
     def has_permission(self, request, view):
         return request.user.has_perm('engine.role.observer')
+
+class ExporterRolePermission(BasePermission):
+    # pylint: disable=no-self-use
+    def has_permission(self, request, view):
+        return request.user.has_perm('engine.role.exporter')
 
 class ProjectCreatePermission(BasePermission):
     # pylint: disable=no-self-use

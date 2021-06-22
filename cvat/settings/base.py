@@ -459,9 +459,6 @@ RESTRICTIONS = {
 
     # allow access to analytics component to users with the following roles
     'analytics_access': (
-        'engine.role.observer',
-        'engine.role.annotator',
-        'engine.role.user',
         'engine.role.admin',
         ),
 }
