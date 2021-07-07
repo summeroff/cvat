@@ -275,7 +275,8 @@ class MyFileSystemStorage(FileSystemStorage):
         return name
 
 def upload_path_handler(instance, filename):
-    return os.path.join(instance.data.get_upload_dirname(), filename)
+    # relative path is required since Django 3.1.11
+    return os.path.join(os.path.relpath(instance.data.get_upload_dirname(), settings.BASE_DIR), filename)
 
 # For client files which the user is uploaded
 class ClientFile(models.Model):
@@ -608,8 +609,8 @@ class CloudStorage(models.Model):
         return os.path.join(self.get_storage_dirname(), "storage.log")
 
     def get_specific_attributes(self):
-        attributes = self.specific_attributes.split('&')
+        specific_attributes = self.specific_attributes
         return {
             item.split('=')[0].strip(): item.split('=')[1].strip()
-                for item in attributes
-        } if len(attributes) else dict()
+                for item in specific_attributes.split('&')
+        } if specific_attributes else dict()
