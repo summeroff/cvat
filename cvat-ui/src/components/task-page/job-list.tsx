@@ -94,6 +94,45 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
+function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
+    const [summary, setSummary] = useState<Record<string, any> | null>(null);
+    const [error, setError] = useState<any>(null);
+    useEffect(() => {
+        setError(null);
+        jobInstance
+            .labelingSummary()
+            .then((_summary: Record<string, any>) => {
+                setSummary(_summary);
+            })
+            .catch((_error: any) => {
+                // eslint-disable-next-line
+                console.log(_error);
+                setError(_error);
+            });
+    }, []);
+
+    if (!summary) {
+        if (error) {
+            if (error.toString().includes('403')) {
+                return <p>You do not have permissions</p>;
+            }
+
+            return <p>Could not fetch, check console output</p>;
+        }
+
+        return (
+            <>
+                <p>Loading.. </p>
+                <LoadingOutlined />
+            </>
+        );
+    }
+
+    return (
+            <Text strong>{summary.objects}</Text>
+    );
+}
+
 function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
     const {
         taskInstance,
@@ -255,6 +294,21 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
             onFilter: (value: string | number | boolean, record: any) =>
                 (record.reviewer.reviewer?.username || false) === value,
         },
+        {
+            title: 'Objects',
+            dataIndex: 'objects',
+            key: 'objects',
+            className: 'cvat-text-color',
+            render: (jobInstance: any): JSX.Element => {
+                const { status } = jobInstance;
+
+                return (
+                    <Text>
+                        {<LabelingSummaryComponent jobInstance={jobInstance} />}
+                    </Text>
+                );
+            },
+        },
     ];
 
     let completed = 0;
@@ -275,6 +329,7 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
             duration: `${moment.duration(now.diff(created)).humanize()}`,
             assignee: job,
             reviewer: job,
+            objects: job,
         });
 
         return acc;
