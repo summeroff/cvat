@@ -961,8 +961,29 @@
          * @throws {module:API.cvat.exceptions.ServerError}
          * @throws {module:API.cvat.exceptions.PluginError}
          */
-        async reviewsSummary() {
+         async reviewsSummary() {
             const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.reviewsSummary);
+            return result;
+        }
+
+        /**
+         * /**
+         * @typedef {Object} LabelingSummary
+         * @property {number} objects Number of done objects
+         */
+        /**
+         * Method returns brief summary of within all reviews
+         * @method labelingSummary
+         * @type {LabelingSummary}
+         * @memberof module:API.cvat.classes.Job
+         * @readonly
+         * @instance
+         * @async
+         * @throws {module:API.cvat.exceptions.ServerError}
+         * @throws {module:API.cvat.exceptions.PluginError}
+         */
+         async labelingSummary() {
+            const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.labelingSummary);
             return result;
         }
     }
@@ -1779,6 +1800,13 @@
             issues_resolved: issues.filter((issue) => issue.resolved_date).length,
             assignees: Array.from(new Set(assignees.filter((assignee) => assignee !== null))),
             reviewers: Array.from(new Set(reviewers.filter((reviewer) => reviewer !== null))),
+        };
+    };
+
+    Job.prototype.labelingSummary.implementation = async function () {
+        const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
+        return {
+            objects: rawAnnotations.shapes.length,
         };
     };
 
