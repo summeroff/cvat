@@ -969,7 +969,9 @@
         /**
          * /**
          * @typedef {Object} LabelingSummary
-         * @property {number} objects Number of done objects
+         * @property {number} tags Number of tags
+         * @property {number} shapes Number of shapes
+         * @property {number} tracks Number of tracks
          */
         /**
          * Method returns brief summary of within all reviews
@@ -1806,7 +1808,9 @@
     Job.prototype.labelingSummary.implementation = async function () {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
         return {
-            objects: rawAnnotations.shapes.length,
+            tags: rawAnnotations.tags.length,
+            shapes: rawAnnotations.shapes.length,
+            tracks: rawAnnotations.tracks.length,
         };
     };
 

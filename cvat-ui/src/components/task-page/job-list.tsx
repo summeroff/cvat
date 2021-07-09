@@ -129,7 +129,7 @@ function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.El
     }
 
     return (
-            <Text strong>{summary.objects}</Text>
+            <Text strong>{summary.tags+summary.shapes+summary.tracks}</Text>
     );
 }
 
