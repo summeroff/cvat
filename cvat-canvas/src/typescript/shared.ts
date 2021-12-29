@@ -44,6 +44,7 @@ export interface DrawnState {
     source: 'AUTO' | 'MANUAL';
     shapeType: string;
     points?: number[];
+    rotation: number;
     attributes: Record<number, string>;
     descriptions: string[];
     zOrder?: number;
@@ -95,16 +96,30 @@ export function displayShapeSize(shapesContainer: SVG.Container, textContainer: 
             .fill('white')
             .addClass('cvat_canvas_text'),
         update(shape: SVG.Shape): void {
-            const bbox = shape.bbox();
-            const text = `${bbox.width.toFixed(1)}x${bbox.height.toFixed(1)}`;
-            const [x, y]: number[] = translateToSVG(
+            let text = `${Math.round(shape.width())}x${Math.round(shape.height())}px`;
+            if (shape.type === 'rect') {
+                let rotation = shape.transform().rotation || 0;
+                // be sure, that rotation in range [0; 360]
+                while (rotation < 0) rotation += 360;
+                rotation %= 360;
+                if (rotation) {
+                    text = `${text} ${rotation.toFixed(1)}\u00B0`;
+                }
+            }
+            const [x, y, cx, cy]: number[] = translateToSVG(
                 (textContainer.node as any) as SVGSVGElement,
-                translateFromSVG((shapesContainer.node as any) as SVGSVGElement, [bbox.x, bbox.y]),
-            );
+                translateFromSVG((shapesContainer.node as any) as SVGSVGElement, [
+                    shape.x(),
+                    shape.y(),
+                    shape.cx(),
+                    shape.cy(),
+                ]),
+            ).map((coord: number): number => Math.round(coord));
             this.sizeElement
                 .clear()
                 .plain(text)
-                .move(x + consts.TEXT_MARGIN, y + consts.TEXT_MARGIN);
+                .move(x + consts.TEXT_MARGIN, y + consts.TEXT_MARGIN)
+                .rotate(shape.transform().rotation, cx, cy);
         },
         rm(): void {
             if (this.sizeElement) {
@@ -115,6 +130,23 @@ export function displayShapeSize(shapesContainer: SVG.Container, textContainer: 
     };
 
     return shapeSize;
+}
+
+export function rotate2DPoints(cx: number, cy: number, angle: number, points: number[]): number[] {
+    const rad = (Math.PI / 180) * angle;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const result = [];
+    for (let i = 0; i < points.length; i += 2) {
+        const x = points[i];
+        const y = points[i + 1];
+        result.push(
+            (x - cx) * cos - (y - cy) * sin + cx,
+            (y - cy) * cos + (x - cx) * sin + cy,
+        );
+    }
+
+    return result;
 }
 
 export function pointsToNumberArray(points: string | Point[]): number[] {
@@ -154,6 +186,22 @@ export function parsePoints(source: string | number[]): Point[] {
                 return { x, y };
             },
         );
+}
+
+export function readPointsFromShape(shape: SVG.Shape): number[] {
+    let points = null;
+    if (shape.type === 'ellipse') {
+        const [rx, ry] = [+shape.attr('rx'), +shape.attr('ry')];
+        const [cx, cy] = [+shape.attr('cx'), +shape.attr('cy')];
+        points = `${cx},${cy} ${cx + rx},${cy - ry}`;
+    } else if (shape.type === 'rect') {
+        points = `${shape.attr('x')},${shape.attr('y')} ` +
+            `${shape.attr('x') + shape.attr('width')},${shape.attr('y') + shape.attr('height')}`;
+    } else {
+        points = shape.attr('points');
+    }
+
+    return pointsToNumberArray(points);
 }
 
 export function stringifyPoints(points: (Point | number)[]): string {

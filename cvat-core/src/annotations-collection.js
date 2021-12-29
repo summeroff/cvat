@@ -235,7 +235,7 @@
                 const object = this.objects[state.clientID];
                 if (typeof object === 'undefined') {
                     throw new ArgumentError(
-                        'The object has not been saved yet. Call ObjectState.put([state]) before you can merge it',
+                        'The object is not in collection yet. Call ObjectState.put([state]) before you can merge it',
                     );
                 }
                 return object;
@@ -282,6 +282,7 @@
                         frame: object.frame,
                         points: [...object.points],
                         occluded: object.occluded,
+                        rotation: object.rotation,
                         zOrder: object.zOrder,
                         outside: false,
                         attributes: Object.keys(object.attributes).reduce((accumulator, attrID) => {
@@ -333,6 +334,7 @@
                             type: shapeType,
                             frame: +keyframe,
                             points: [...shape.points],
+                            rotation: shape.rotation,
                             occluded: shape.occluded,
                             outside: shape.outside,
                             zOrder: shape.zOrder,
@@ -442,6 +444,7 @@
             const position = {
                 type: objectState.shapeType,
                 points: [...objectState.points],
+                rotation: objectState.rotation,
                 occluded: objectState.occluded,
                 outside: objectState.outside,
                 zOrder: objectState.zOrder,
@@ -481,6 +484,12 @@
                 return shape;
             });
             prev.shapes.push(position);
+
+            // add extra keyframe if no other keyframes before outside
+            if (!prev.shapes.some((shape) => shape.frame === frame - 1)) {
+                prev.shapes.push(JSON.parse(JSON.stringify(position)));
+                prev.shapes[prev.shapes.length - 2].frame -= 1;
+            }
             prev.shapes[prev.shapes.length - 1].outside = true;
 
             let clientID = ++this.count;
@@ -725,6 +734,7 @@
                 checkObjectType('object state', state, null, ObjectState);
                 checkObjectType('state client ID', state.clientID, 'undefined', null);
                 checkObjectType('state frame', state.frame, 'integer', null);
+                checkObjectType('state rotation', state.rotation || 0, 'number', null);
                 checkObjectType('state attributes', state.attributes, null, Object);
                 checkObjectType('state label', state.label, null, Label);
 
@@ -768,6 +778,7 @@
                             label_id: state.label.id,
                             occluded: state.occluded || false,
                             points: [...state.points],
+                            rotation: state.rotation || 0,
                             type: state.shapeType,
                             z_order: state.zOrder,
                             source: state.source,
@@ -787,6 +798,7 @@
                                     occluded: state.occluded || false,
                                     outside: false,
                                     points: [...state.points],
+                                    rotation: state.rotation || 0,
                                     type: state.shapeType,
                                     z_order: state.zOrder,
                                 },
@@ -844,7 +856,7 @@
                 if (typeof object === 'undefined') {
                     throw new ArgumentError('The object has not been saved yet. Call annotations.put([state]) before');
                 }
-                const distance = object.constructor.distance(state.points, x, y);
+                const distance = object.constructor.distance(state.points, x, y, state.rotation);
                 if (distance !== null && (minimumDistance === null || distance < minimumDistance)) {
                     minimumDistance = distance;
                     minimumState = state;

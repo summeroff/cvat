@@ -1,5 +1,6 @@
+attrs==21.2.0
 click==7.1.2
-Django==3.1.13
+Django==3.2.10
 django-appconf==1.0.4
 django-auth-ldap==2.2.0
 django-cacheops==5.0.1
@@ -8,7 +9,7 @@ django-rq==2.3.2
 EasyProcess==0.3
 Pillow==8.3.2
 numpy==1.19.5
-python-ldap==3.3.1
+python-ldap==3.4.0
 pytz==2020.1
 pyunpack==0.2.1
 rcssmin==1.0.6
@@ -27,9 +28,9 @@ GitPython==3.1.8
 coreapi==2.3.3
 django-filter==2.3.0
 Markdown==3.2.2
-djangorestframework==3.11.2
+djangorestframework==3.12.4
 Pygments==2.7.4
-drf-yasg==1.17.1
+drf-yasg==1.20.0
 Shapely==1.7.1
 pdf2image==1.14.0
 django-rest-auth[with_social]==0.9.5
@@ -55,3 +56,4 @@ google-cloud-storage==1.42.0
 # when pycocotools is installed by wheel in python 3.8+
 datumaro==0.2.0 --no-binary=datumaro --no-binary=pycocotools
 urllib3>=1.26.5 # not directly required, pinned by Snyk to avoid a vulnerability
+natsort==8.0.0

@@ -44,6 +44,7 @@ export interface ProjectsState {
     count: number;
     current: Project[];
     gettingQuery: ProjectsQuery;
+    tasksGettingQuery: TasksQuery;
     activities: {
         creates: {
             id: null | number;
@@ -52,7 +53,11 @@ export interface ProjectsState {
         deletes: {
             [projectId: number]: boolean; // deleted (deleting if in dictionary)
         };
+        backups: {
+            [projectId: number]: boolean;
+        }
     };
+    restoring: boolean;
 }
 
 export interface TasksQuery {
@@ -64,6 +69,7 @@ export interface TasksQuery {
     name: string | null;
     status: string | null;
     mode: string | null;
+    projectId: number | null;
     [key: string]: string | number | null;
 }
 
@@ -111,6 +117,14 @@ export interface ExportState {
     projects: {
         [pid: number]: string[];
     };
+    instance: any;
+    modalVisible: boolean;
+}
+
+export interface ImportState {
+    importingId: number | null;
+    progress: number;
+    status: string;
     instance: any;
     modalVisible: boolean;
 }
@@ -267,6 +281,12 @@ export enum TaskStatus {
     COMPLETED = 'completed',
 }
 
+export enum JobStage {
+    ANNOTATION = 'annotation',
+    REVIEW = 'validation',
+    ACCEPTANCE = 'acceptance',
+}
+
 export enum RQStatus {
     unknown = 'unknown',
     queued = 'queued',
@@ -293,8 +313,8 @@ export interface ModelsState {
     inferences: {
         [index: number]: ActiveInference;
     };
-    visibleRunWindows: boolean;
-    activeRunTask: any;
+    modelRunnerIsVisible: boolean;
+    modelRunnerTask: any;
 }
 
 export interface ErrorState {
@@ -320,6 +340,8 @@ export interface NotificationsState {
             updating: null | ErrorState;
             deleting: null | ErrorState;
             creating: null | ErrorState;
+            restoring: null | ErrorState;
+            backuping: null | ErrorState;
         };
         tasks: {
             fetching: null | ErrorState;
@@ -332,6 +354,9 @@ export interface NotificationsState {
             exporting: null | ErrorState;
             importing: null | ErrorState;
             moving: null | ErrorState;
+        };
+        jobs: {
+            updating: null | ErrorState;
         };
         formats: {
             fetching: null | ErrorState;
@@ -383,21 +408,40 @@ export interface NotificationsState {
             fetching: null | ErrorState;
         };
         review: {
-            initialization: null | ErrorState;
             finishingIssue: null | ErrorState;
             resolvingIssue: null | ErrorState;
             reopeningIssue: null | ErrorState;
             commentingIssue: null | ErrorState;
             submittingReview: null | ErrorState;
+            deletingIssue: null | ErrorState;
         };
         predictor: {
             prediction: null | ErrorState;
+        };
+        exporting: {
+            dataset: null | ErrorState;
+            annotation: null | ErrorState;
+        };
+        importing: {
+            dataset: null | ErrorState;
+            annotation: null | ErrorState;
         };
         cloudStorages: {
             creating: null | ErrorState;
             fetching: null | ErrorState;
             updating: null | ErrorState;
             deleting: null | ErrorState;
+        };
+        organizations: {
+            fetching: null | ErrorState;
+            creating: null | ErrorState;
+            updating: null | ErrorState;
+            activation: null | ErrorState;
+            deleting: null | ErrorState;
+            leaving: null | ErrorState;
+            inviting: null | ErrorState;
+            updatingMembership: null | ErrorState;
+            removingMembership: null | ErrorState;
         };
     };
     messages: {
@@ -415,6 +459,9 @@ export interface NotificationsState {
             requestPasswordResetDone: string;
             resetPasswordDone: string;
         };
+        projects: {
+            restoringDone: string;
+        }
     };
 }
 
@@ -496,7 +543,7 @@ export interface AnnotationState {
             pointID: number | null;
             clientID: number | null;
         };
-        instance: Canvas | Canvas3d;
+        instance: Canvas | Canvas3d | null;
         ready: boolean;
         activeControl: ActiveControl;
     };
@@ -572,8 +619,6 @@ export interface AnnotationState {
     };
     colors: any[];
     filtersPanelVisible: boolean;
-    requestReviewDialogVisible: boolean;
-    submitReviewDialogVisible: boolean;
     sidebarCollapsed: boolean;
     appearanceCollapsed: boolean;
     workspace: Workspace;
@@ -617,6 +662,7 @@ export interface PlayerSettingsState {
     frameSpeed: FrameSpeed;
     resetZoom: boolean;
     rotateAll: boolean;
+    smoothImage: boolean;
     grid: boolean;
     gridSize: number;
     gridColor: GridColor;
@@ -636,6 +682,9 @@ export interface WorkspaceSettingsState {
     intelligentPolygonCrop: boolean;
     defaultApproxPolyAccuracy: number;
     toolsBlockerState: ToolsBlockerState;
+    textFontSize: number;
+    textPosition: 'auto' | 'center';
+    textContent: string;
 }
 
 export interface ShapesSettingsState {
@@ -668,17 +717,29 @@ export enum ReviewStatus {
 }
 
 export interface ReviewState {
-    reviews: any[];
     issues: any[];
     frameIssues: any[];
     latestComments: string[];
-    activeReview: any | null;
     newIssuePosition: number[] | null;
     issuesHidden: boolean;
+    issuesResolvedHidden: boolean;
     fetching: {
-        reviewId: number | null;
+        jobId: number | null;
         issueId: number | null;
     };
+}
+
+export interface OrganizationState {
+    list: any[];
+    current: any | null;
+    initialized: boolean;
+    fetching: boolean;
+    creating: boolean;
+    updating: boolean;
+    inviting: boolean;
+    leaving: boolean;
+    removingMember: boolean;
+    updatingMember: boolean;
 }
 
 export interface CombinedState {
@@ -697,7 +758,9 @@ export interface CombinedState {
     shortcuts: ShortcutsState;
     review: ReviewState;
     export: ExportState;
+    import: ImportState;
     cloudStorages: CloudStoragesState;
+    organizations: OrganizationState;
 }
 
 export enum DimensionType {
