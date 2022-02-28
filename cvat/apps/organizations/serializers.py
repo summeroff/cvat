@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2021-2022 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -77,14 +77,16 @@ class InvitationWriteSerializer(serializers.ModelSerializer):
         membership_data = validated_data.pop('membership')
         organization = validated_data.pop('organization')
         try:
-            user = get_user_model().objects.get(**membership_data['user'])
+            user = get_user_model().objects.get(
+                email__iexact=membership_data['user']['email'])
             del membership_data['user']
         except ObjectDoesNotExist:
             raise serializers.ValidationError(f'You cannot invite an user '
                 f'with {membership_data["user"]["email"]} email. It is not '
                 f'a valid email in the system.')
 
-        membership, created = Membership.objects.get_or_create(**membership_data,
+        membership, created = Membership.objects.get_or_create(
+            defaults=membership_data,
             user=user, organization=organization)
         if not created:
             raise serializers.ValidationError('The user is a member of '

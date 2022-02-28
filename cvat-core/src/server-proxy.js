@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2021 Intel Corporation
+// Copyright (C) 2019-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -840,8 +840,8 @@
                             },
                             onProgress(bytesUploaded) {
                                 const currentUploadedSize = totalSentSize + bytesUploaded;
-                                const percentage = ((currentUploadedSize / totalSize) * 100).toFixed(2);
-                                onUpdate(`The data are being uploaded to the server ${percentage}%`);
+                                const percentage = currentUploadedSize / totalSize;
+                                onUpdate('The data are being uploaded to the server', percentage);
                             },
                             onSuccess() {
                                 totalSentSize += file.size;
@@ -869,8 +869,8 @@
                         for (const [idx, element] of fileBulks[currentChunkNumber].files.entries()) {
                             taskData.append(`client_files[${idx}]`, element);
                         }
-                        onUpdate(`The data are being uploaded to the server
-                                    ${((totalSentSize / totalSize) * 100).toFixed(2)}%`);
+                        const percentage = totalSentSize / totalSize;
+                        onUpdate('The data are being uploaded to the server', percentage);
                         await Axios.post(`${backendAPI}/tasks/${taskId}/data`, taskData, {
                             ...params,
                             proxy: config.proxy,
@@ -924,14 +924,25 @@
                 return createdTask[0];
             }
 
-            async function getJob(jobID) {
+            async function getJobs(filter = {}) {
                 const { backendAPI } = config;
+                const id = filter.id || null;
 
                 let response = null;
                 try {
-                    response = await Axios.get(`${backendAPI}/jobs/${jobID}`, {
-                        proxy: config.proxy,
-                    });
+                    if (id !== null) {
+                        response = await Axios.get(`${backendAPI}/jobs/${id}`, {
+                            proxy: config.proxy,
+                        });
+                    } else {
+                        response = await Axios.get(`${backendAPI}/jobs`, {
+                            proxy: config.proxy,
+                            params: {
+                                ...filter,
+                                page_size: 12,
+                            },
+                        });
+                    }
                 } catch (errorData) {
                     throw generateError(errorData);
                 }
@@ -1069,12 +1080,13 @@
                 return response.data;
             }
 
-            async function getPreview(tid) {
+            async function getPreview(tid, jid) {
                 const { backendAPI } = config;
 
                 let response = null;
                 try {
-                    response = await Axios.get(`${backendAPI}/tasks/${tid}/data`, {
+                    const url = `${backendAPI}/${jid !== null ? 'jobs' : 'tasks'}/${jid || tid}/data`;
+                    response = await Axios.get(url, {
                         params: {
                             type: 'preview',
                         },
@@ -1800,7 +1812,7 @@
 
                     jobs: {
                         value: Object.freeze({
-                            get: getJob,
+                            get: getJobs,
                             save: saveJob,
                         }),
                         writable: false,

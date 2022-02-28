@@ -88,12 +88,23 @@ filter = [] { # Django Q object to filter list of entries
     utils.is_admin
     utils.is_sandbox
 } else = qobject {
+    utils.is_admin
     utils.is_organization
     qobject := [ {"organization": input.auth.organization.id} ]
 } else = qobject {
     utils.is_sandbox
     user := input.auth.user
-    qobject := [ {"owner_id": user.id}, {"assignee_id": user.id}, "|"]
+    qobject := [ {"owner_id": user.id}, {"assignee_id": user.id}, "|" ]
+} else = qobject {
+    utils.is_organization
+    utils.has_perm(utils.USER)
+    organizations.has_perm(organizations.MAINTAINER)
+    qobject := [ {"organization": input.auth.organization.id} ]
+} else = qobject {
+    organizations.has_perm(organizations.WORKER)
+    user := input.auth.user
+    qobject := [ {"owner_id": user.id}, {"assignee_id": user.id}, "|",
+        {"organization": input.auth.organization.id}, "&" ]
 }
 
 allow {
@@ -118,14 +129,14 @@ allow {
 
 
 allow {
-    input.scope == utils.DELETE
+    { utils.DELETE, utils.UPDATE_ORG }[input.scope]
     utils.is_sandbox
     utils.has_perm(utils.WORKER)
     utils.is_resource_owner
 }
 
 allow {
-    input.scope == utils.DELETE
+    { utils.DELETE, utils.UPDATE_ORG }[input.scope]
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.WORKER)
     organizations.is_member
@@ -133,7 +144,7 @@ allow {
 }
 
 allow {
-    input.scope == utils.DELETE
+    { utils.DELETE, utils.UPDATE_ORG }[input.scope]
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.USER)
     organizations.is_staff

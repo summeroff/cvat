@@ -21,7 +21,7 @@ from rest_framework import serializers, status
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from sendfile import sendfile
+from django_sendfile import sendfile
 
 import cvat.apps.dataset_manager as dm
 from cvat.apps.engine import models
@@ -566,7 +566,7 @@ class ProjectExporter(_ExporterBase, _ProjectBackupBase):
     def _write_manifest(self, zip_object):
         def serialize_project():
             project_serializer = ProjectSerializer(self._db_project)
-            for field in ('assignee', 'owner', 'tasks', 'training_project', 'url'):
+            for field in ('assignee', 'owner', 'tasks', 'url'):
                 project_serializer.fields.pop(field)
 
             project = self._prepare_project_meta(project_serializer.data)
@@ -611,7 +611,7 @@ class ProjectImporter(_ImporterBase, _ProjectBackupBase):
         self._prepare_project_meta(self._manifest)
         self._manifest["owner_id"] = self._user_id
 
-        self._db_project = models.Project.objects.create(**self._manifest)
+        self._db_project = models.Project.objects.create(**self._manifest, organization_id=self._org_id)
         project_path = self._db_project.get_project_dirname()
         if os.path.isdir(project_path):
             shutil.rmtree(project_path)
@@ -634,6 +634,7 @@ class ProjectImporter(_ImporterBase, _ProjectBackupBase):
                 TaskImporter(
                     file=zf,
                     user_id=self._user_id,
+                    org_id=self._org_id,
                     project_id=self._db_project.id,
                     subdir=task_dir,
                     label_mapping=self._labels_mapping).import_task()
@@ -707,7 +708,7 @@ def export(db_instance, request):
             "Unexpected type of db_isntance: {}".format(type(db_instance)))
 
     queue = django_rq.get_queue("default")
-    rq_id = "/api/v1/{}s/{}/backup".format(filename_prefix, db_instance.pk)
+    rq_id = "/api/{}s/{}/backup".format(filename_prefix, db_instance.pk)
     rq_job = queue.fetch_job(rq_id)
     if rq_job:
         last_project_update_time = timezone.localtime(db_instance.updated_date)
@@ -800,7 +801,7 @@ def import_project(request):
     if 'rq_id' in request.data:
         rq_id = request.data['rq_id']
     else:
-        rq_id = "{}@/api/v1/projects/{}/import".format(request.user, uuid.uuid4())
+        rq_id = "{}@/api/projects/{}/import".format(request.user, uuid.uuid4())
     Serializer = ProjectFileSerializer
     file_field_name = 'project_file'
 
@@ -816,7 +817,7 @@ def import_task(request):
     if 'rq_id' in request.data:
         rq_id = request.data['rq_id']
     else:
-        rq_id = "{}@/api/v1/tasks/{}/import".format(request.user, uuid.uuid4())
+        rq_id = "{}@/api/tasks/{}/import".format(request.user, uuid.uuid4())
     Serializer = TaskFileSerializer
     file_field_name = 'task_file'
 

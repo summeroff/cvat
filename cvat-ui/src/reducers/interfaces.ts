@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -6,6 +6,7 @@ import { Canvas3d } from 'cvat-canvas3d/src/typescript/canvas3d';
 import { Canvas, RectDrawingMethod, CuboidDrawingMethod } from 'cvat-canvas-wrapper';
 import { IntelligentScissors } from 'utils/opencv-wrapper/intelligent-scissors';
 import { KeyMap } from 'utils/mousetrap-react';
+import { OpenCVTracker } from 'utils/opencv-wrapper/opencv-interfaces';
 
 export type StringObject = {
     [index: string]: string;
@@ -69,6 +70,7 @@ export interface TasksQuery {
     name: string | null;
     status: string | null;
     mode: string | null;
+    filter: string | null;
     projectId: number | null;
     [key: string]: string | number | null;
 }
@@ -76,6 +78,21 @@ export interface TasksQuery {
 export interface Task {
     instance: any; // cvat-core instance
     preview: string;
+}
+
+export interface JobsQuery {
+    page: number;
+    sort: string | null;
+    search: string | null;
+    filter: string | null;
+}
+
+export interface JobsState {
+    query: JobsQuery;
+    fetching: boolean;
+    count: number;
+    current: any[];
+    previews: string[];
 }
 
 export interface TasksState {
@@ -142,7 +159,7 @@ export interface CloudStoragesQuery {
     owner: string | null;
     displayName: string | null;
     description: string | null;
-    resourceName: string | null;
+    resource: string | null;
     providerType: string | null;
     credentialsType: string | null;
     [key: string]: string | number | null | undefined;
@@ -268,7 +285,7 @@ export interface Model {
     };
 }
 
-export type OpenCVTool = IntelligentScissors;
+export type OpenCVTool = IntelligentScissors | OpenCVTracker;
 
 export interface ToolsBlockerState {
     algorithmsLocked?: boolean;
@@ -357,6 +374,7 @@ export interface NotificationsState {
         };
         jobs: {
             updating: null | ErrorState;
+            fetching: null | ErrorState;
         };
         formats: {
             fetching: null | ErrorState;
@@ -473,6 +491,7 @@ export enum ActiveControl {
     DRAW_POLYGON = 'draw_polygon',
     DRAW_POLYLINE = 'draw_polyline',
     DRAW_POINTS = 'draw_points',
+    DRAW_ELLIPSE = 'draw_ellipse',
     DRAW_CUBOID = 'draw_cuboid',
     MERGE = 'merge',
     GROUP = 'group',
@@ -489,6 +508,7 @@ export enum ShapeType {
     POLYGON = 'polygon',
     POLYLINE = 'polyline',
     POINTS = 'points',
+    ELLIPSE = 'ellipse',
     CUBOID = 'cuboid',
 }
 
@@ -745,6 +765,7 @@ export interface OrganizationState {
 export interface CombinedState {
     auth: AuthState;
     projects: ProjectsState;
+    jobs: JobsState;
     tasks: TasksState;
     about: AboutState;
     share: ShareState;

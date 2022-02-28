@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -1014,6 +1014,13 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
                 </Row>
             );
         }
+        const attrsMap: Record<string, Record<string, number>> = {};
+        jobInstance.labels.forEach((label: any) => {
+            attrsMap[label.name] = {};
+            label.attributes.forEach((attr: any) => {
+                attrsMap[label.name][attr.name] = attr.id;
+            });
+        });
 
         return (
             <DetectorRunner
@@ -1034,7 +1041,11 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
                                 frame,
                                 occluded: false,
                                 source: 'auto',
-                                attributes: {},
+                                attributes: (data.attributes as { name: string, value: string }[])
+                                    .reduce((mapping, attr) => {
+                                        mapping[attrsMap[data.label][attr.name]] = attr.value;
+                                        return mapping;
+                                    }, {} as Record<number, string>),
                                 zOrder: curZOrder,
                             }),
                         );
@@ -1092,7 +1103,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
 
         if (![...interactors, ...detectors, ...trackers].length) return null;
 
-        const dynamcPopoverPros = isActivated ?
+        const dynamicPopoverProps = isActivated ?
             {
                 overlayStyle: {
                     display: 'none',
@@ -1142,7 +1153,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
 
         return showAnyContent ? (
             <>
-                <CustomPopover {...dynamcPopoverPros} placement='right' content={this.renderPopoverContent()}>
+                <CustomPopover {...dynamicPopoverProps} placement='right' content={this.renderPopoverContent()}>
                     <Icon {...dynamicIconProps} component={AIToolsIcon} />
                 </CustomPopover>
                 {interactionContent}

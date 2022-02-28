@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2021-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -14,7 +14,7 @@ import message from 'antd/lib/message';
 import Upload, { RcFile } from 'antd/lib/upload';
 
 import {
-    DownloadOutlined, InboxOutlined, LoadingOutlined, QuestionCircleFilled,
+    UploadOutlined, InboxOutlined, LoadingOutlined, QuestionCircleOutlined,
 } from '@ant-design/icons';
 
 import CVATTooltip from 'components/common/cvat-tooltip';
@@ -53,7 +53,7 @@ function ImportDatasetModal(): JSX.Element {
             dispatch(importDatasetAsync(instance, values.selectedFormat as string, file));
             closeModal();
             Notification.info({
-                message: 'Dataset export started',
+                message: 'Dataset import started',
                 description: `Dataset import was started for project #${instance?.id}. `,
                 className: 'cvat-notification-notice-import-dataset-start',
             });
@@ -74,7 +74,7 @@ function ImportDatasetModal(): JSX.Element {
                                     'Labels from project will be used'
                             }
                         >
-                            <QuestionCircleFilled className='cvat-modal-import-header-question-icon' />
+                            <QuestionCircleOutlined className='cvat-modal-import-header-question-icon' />
                         </CVATTooltip>
                     </>
                 )}
@@ -91,7 +91,7 @@ function ImportDatasetModal(): JSX.Element {
                 >
                     <Form.Item
                         name='selectedFormat'
-                        label='Export format'
+                        label='Import format'
                         rules={[{ required: true, message: 'Format must be selected' }]}
                     >
                         <Select placeholder='Select dataset format' className='cvat-modal-import-select'>
@@ -114,7 +114,7 @@ function ImportDatasetModal(): JSX.Element {
                                                 disabled={disabled}
                                                 className='cvat-modal-import-dataset-option-item'
                                             >
-                                                <DownloadOutlined />
+                                                <UploadOutlined />
                                                 <Text disabled={disabled}>{importer.name}</Text>
                                                 {pending && <LoadingOutlined style={{ marginLeft: 10 }} />}
                                             </Select.Option>

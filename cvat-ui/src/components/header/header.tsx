@@ -1,11 +1,11 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import './styles.scss';
 import React from 'react';
 import { connect } from 'react-redux';
-import { useHistory } from 'react-router';
+import { useHistory, useLocation } from 'react-router';
 import { Row, Col } from 'antd/lib/grid';
 import Icon, {
     SettingOutlined,
@@ -167,6 +167,7 @@ function HeaderContainer(props: Props): JSX.Element {
     } = consts;
 
     const history = useHistory();
+    const location = useLocation();
 
     function showAboutModal(): void {
         Modal.info({
@@ -266,11 +267,11 @@ function HeaderContainer(props: Props): JSX.Element {
                 icon={organizationsFetching ? <LoadingOutlined /> : <TeamOutlined />}
             >
                 {currentOrganization ? (
-                    <Menu.Item icon={<SettingOutlined />} key='open_organization' onClick={() => history.push('/organization')}>
+                    <Menu.Item icon={<SettingOutlined />} key='open_organization' onClick={() => history.push('/organization')} className='cvat-header-menu-open-organization'>
                         Settings
                     </Menu.Item>
                 ) : null}
-                <Menu.Item icon={<PlusOutlined />} key='create_organization' onClick={() => history.push('/organizations/create')}>Create</Menu.Item>
+                <Menu.Item icon={<PlusOutlined />} key='create_organization' onClick={() => history.push('/organizations/create')} className='cvat-header-menu-create-organization'>Create</Menu.Item>
                 { organizationsList.length > 5 ? (
                     <Menu.Item
                         key='switch_organization'
@@ -315,7 +316,8 @@ function HeaderContainer(props: Props): JSX.Element {
                         <Menu.Divider />
                         <Menu.ItemGroup>
                             <Menu.Item
-                                className={!currentOrganization ? 'cvat-header-menu-active-organization-item' : ''}
+                                className={!currentOrganization ?
+                                    'cvat-header-menu-active-organization-item' : 'cvat-header-menu-organization-item'}
                                 key='$personal'
                                 onClick={resetOrganization}
                             >
@@ -324,7 +326,7 @@ function HeaderContainer(props: Props): JSX.Element {
                             {organizationsList.map((organization: any): JSX.Element => (
                                 <Menu.Item
                                     className={currentOrganization?.slug === organization.slug ?
-                                        'cvat-header-menu-active-organization-item' : ''}
+                                        'cvat-header-menu-active-organization-item' : 'cvat-header-menu-organization-item'}
                                     key={organization.slug}
                                     onClick={() => setNewOrganization(organization)}
                                 >
@@ -369,15 +371,21 @@ function HeaderContainer(props: Props): JSX.Element {
         </Menu>
     );
 
+    const getButtonClassName = (value: string): string => {
+        // eslint-disable-next-line security/detect-non-literal-regexp
+        const regex = new RegExp(`${value}$`);
+        return location.pathname.match(regex) ? 'cvat-header-button cvat-active-header-button' : 'cvat-header-button';
+    };
+
     return (
         <Layout.Header className='cvat-header'>
             <div className='cvat-left-header'>
                 <Icon className='cvat-logo-icon' component={CVATLogo} />
                 <Button
-                    className='cvat-header-button'
+                    className={getButtonClassName('projects')}
                     type='link'
                     value='projects'
-                    href='/projects'
+                    href='/projects?page=1'
                     onClick={(event: React.MouseEvent): void => {
                         event.preventDefault();
                         history.push('/projects');
@@ -386,7 +394,7 @@ function HeaderContainer(props: Props): JSX.Element {
                     Projects
                 </Button>
                 <Button
-                    className='cvat-header-button'
+                    className={getButtonClassName('tasks')}
                     type='link'
                     value='tasks'
                     href='/tasks?page=1'
@@ -398,7 +406,19 @@ function HeaderContainer(props: Props): JSX.Element {
                     Tasks
                 </Button>
                 <Button
-                    className='cvat-header-button'
+                    className={getButtonClassName('jobs')}
+                    type='link'
+                    value='jobs'
+                    href='/jobs?page=1'
+                    onClick={(event: React.MouseEvent): void => {
+                        event.preventDefault();
+                        history.push('/jobs');
+                    }}
+                >
+                    Jobs
+                </Button>
+                <Button
+                    className={getButtonClassName('cloudstorages')}
                     type='link'
                     value='cloudstorages'
                     href='/cloudstorages?page=1'
@@ -409,9 +429,9 @@ function HeaderContainer(props: Props): JSX.Element {
                 >
                     Cloud Storages
                 </Button>
-                {isModelsPluginActive && (
+                {isModelsPluginActive ? (
                     <Button
-                        className='cvat-header-button'
+                        className={getButtonClassName('models')}
                         type='link'
                         value='models'
                         href='/models'
@@ -422,8 +442,8 @@ function HeaderContainer(props: Props): JSX.Element {
                     >
                         Models
                     </Button>
-                )}
-                {isAnalyticsPluginActive && (
+                ) : null}
+                {isAnalyticsPluginActive ? (
                     <Button
                         className='cvat-header-button'
                         type='link'
@@ -437,7 +457,7 @@ function HeaderContainer(props: Props): JSX.Element {
                     >
                         Analytics
                     </Button>
-                )}
+                ) : null}
             </div>
             <div className='cvat-right-header'>
                 <CVATTooltip overlay='Click to open repository'>
@@ -475,13 +495,15 @@ function HeaderContainer(props: Props): JSX.Element {
                         <UserOutlined className='cvat-header-dropdown-icon' />
                         <Row>
                             <Col span={24}>
-                                <Text strong>
+                                <Text strong className='cvat-header-menu-user-dropdown-user'>
                                     {user.username.length > 14 ? `${user.username.slice(0, 10)} ...` : user.username}
                                 </Text>
                             </Col>
                             { currentOrganization ? (
                                 <Col span={24}>
-                                    <Text>{currentOrganization.slug}</Text>
+                                    <Text className='cvat-header-menu-user-dropdown-organization'>
+                                        {currentOrganization.slug}
+                                    </Text>
                                 </Col>
                             ) : null }
                         </Row>

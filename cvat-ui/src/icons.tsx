@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -6,7 +6,6 @@ import React from 'react';
 
 import SVGCVATLogo from './assets/cvat-logo.svg';
 import SVGEmptyTasksIcon from './assets/empty-tasks-icon.svg';
-import SVGMenuIcon from './assets/menu-icon.svg';
 import SVGCursorIcon from './assets/cursor-icon.svg';
 import SVGMoveIcon from './assets/move-icon.svg';
 import SVGRotateIcon from './assets/rotate-icon.svg';
@@ -15,6 +14,7 @@ import SVGZoomIcon from './assets/zoom-icon.svg';
 import SVGRectangleIcon from './assets/rectangle-icon.svg';
 import SVGPolygonIcon from './assets/polygon-icon.svg';
 import SVGPointIcon from './assets/point-icon.svg';
+import SVGEllipseIcon from './assets/ellipse-icon.svg';
 import SVGPolylineIcon from './assets/polyline-icon.svg';
 import SVGTagIcon from './assets/tag-icon.svg';
 import SVGMergeIcon from './assets/merge-icon.svg';
@@ -39,7 +39,6 @@ import SVGLastIcon from './assets/last-icon.svg';
 import SVGInfoIcon from './assets/info-icon.svg';
 import SVGFullscreenIcon from './assets/fullscreen-icon.svg';
 import SVGObjectOutsideIcon from './assets/object-outside-icon.svg';
-import SVGObjectInsideIcon from './assets/object-inside-icon.svg';
 import SVGBackgroundIcon from './assets/background-icon.svg';
 import SVGForegroundIcon from './assets/foreground-icon.svg';
 import SVGCubeIcon from './assets/cube-icon.svg';
@@ -56,7 +55,6 @@ import SVGOpenVINO from './assets/openvino.svg';
 
 export const CVATLogo = React.memo((): JSX.Element => <SVGCVATLogo />);
 export const EmptyTasksIcon = React.memo((): JSX.Element => <SVGEmptyTasksIcon />);
-export const MenuIcon = React.memo((): JSX.Element => <SVGMenuIcon />);
 export const CursorIcon = React.memo((): JSX.Element => <SVGCursorIcon />);
 export const MoveIcon = React.memo((): JSX.Element => <SVGMoveIcon />);
 export const RotateIcon = React.memo((): JSX.Element => <SVGRotateIcon />);
@@ -65,6 +63,7 @@ export const ZoomIcon = React.memo((): JSX.Element => <SVGZoomIcon />);
 export const RectangleIcon = React.memo((): JSX.Element => <SVGRectangleIcon />);
 export const PolygonIcon = React.memo((): JSX.Element => <SVGPolygonIcon />);
 export const PointIcon = React.memo((): JSX.Element => <SVGPointIcon />);
+export const EllipseIcon = React.memo((): JSX.Element => <SVGEllipseIcon />);
 export const PolylineIcon = React.memo((): JSX.Element => <SVGPolylineIcon />);
 export const TagIcon = React.memo((): JSX.Element => <SVGTagIcon />);
 export const MergeIcon = React.memo((): JSX.Element => <SVGMergeIcon />);
@@ -89,7 +88,6 @@ export const LastIcon = React.memo((): JSX.Element => <SVGLastIcon />);
 export const InfoIcon = React.memo((): JSX.Element => <SVGInfoIcon />);
 export const FullscreenIcon = React.memo((): JSX.Element => <SVGFullscreenIcon />);
 export const ObjectOutsideIcon = React.memo((): JSX.Element => <SVGObjectOutsideIcon />);
-export const ObjectInsideIcon = React.memo((): JSX.Element => <SVGObjectInsideIcon />);
 export const BackgroundIcon = React.memo((): JSX.Element => <SVGBackgroundIcon />);
 export const ForegroundIcon = React.memo((): JSX.Element => <SVGForegroundIcon />);
 export const CubeIcon = React.memo((): JSX.Element => <SVGCubeIcon />);
