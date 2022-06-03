@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2022 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -492,6 +492,8 @@ class ProjectPermission(OpenPolicyAgentPermission):
             ('retrieve', 'GET'): 'view',
             ('tasks', 'GET'): 'view',
             ('dataset', 'POST'): 'import:dataset',
+            ('append_dataset_chunk', 'HEAD'): 'import:dataset',
+            ('append_dataset_chunk', 'PATCH'): 'import:dataset',
             ('annotations', 'GET'): 'export:annotations',
             ('dataset', 'GET'): 'export:dataset',
             ('export_backup', 'GET'): 'export:backup',
@@ -643,12 +645,15 @@ class TaskPermission(OpenPolicyAgentPermission):
             ('annotations', 'PATCH'): 'update:annotations',
             ('annotations', 'DELETE'): 'delete:annotations',
             ('annotations', 'PUT'): 'update:annotations',
+            ('annotations', 'POST'): 'import:annotations',
+            ('append_annotations_chunk', 'PATCH'): 'update:annotations',
+            ('append_annotations_chunk', 'HEAD'): 'update:annotations',
             ('dataset_export', 'GET'): 'export:dataset',
             ('data', 'GET'): 'view:data',
             ('data_info', 'GET'): 'view:data',
             ('data', 'POST'): 'upload:data',
-            ('append_tus_chunk', 'PATCH'): 'upload:data',
-            ('append_tus_chunk', 'HEAD'): 'upload:data',
+            ('append_data_chunk', 'PATCH'): 'upload:data',
+            ('append_data_chunk', 'HEAD'): 'upload:data',
             ('jobs', 'GET'): 'view',
             ('import_backup', 'POST'): 'import:backup',
             ('export_backup', 'GET'): 'export:backup',
@@ -788,8 +793,12 @@ class JobPermission(OpenPolicyAgentPermission):
             ('annotations', 'PATCH'): 'update:annotations',
             ('annotations', 'DELETE'): 'delete:annotations',
             ('annotations', 'PUT'): 'update:annotations',
+            ('annotations', 'POST'): 'import:annotations',
+            ('append_annotations_chunk', 'PATCH'): 'update:annotations',
+            ('append_annotations_chunk', 'HEAD'): 'update:annotations',
             ('data', 'GET'): 'view:data',
             ('issues', 'GET'): 'view',
+            ('commits', 'GET'): 'view:commits'
         }.get((view.action, request.method))
 
         scopes = []
@@ -959,7 +968,8 @@ class IssuePermission(OpenPolicyAgentPermission):
             'create': 'create@job',
             'destroy': 'delete',
             'partial_update': 'update',
-            'retrieve': 'view'
+            'retrieve': 'view',
+            'comments': 'view'
         }.get(view.action, None)]
 
     def get_resource(self):
@@ -1015,8 +1025,14 @@ class PolicyEnforcer(BasePermission):
     # pylint: disable=no-self-use
     def check_permission(self, request, view, obj):
         permissions = []
-        for perm in OpenPolicyAgentPermission.__subclasses__():
-            permissions.extend(perm.create(request, view, obj))
+        # DRF can send OPTIONS request. Internally it will try to get
+        # information about serializers for PUT and POST requests (clone
+        # request and replace the http method). To avoid handling
+        # ('POST', 'metadata') and ('PUT', 'metadata') in every request,
+        # the condition below is enough.
+        if not self.is_metadata_request(request, view):
+            for perm in OpenPolicyAgentPermission.__subclasses__():
+                permissions.extend(perm.create(request, view, obj))
 
         return all(permissions)
 
@@ -1028,6 +1044,10 @@ class PolicyEnforcer(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return self.check_permission(request, view, obj)
+
+    @staticmethod
+    def is_metadata_request(request, view):
+        return request.method == 'OPTIONS' or view.action == 'metadata'
 
 class IsMemberInOrganization(BasePermission):
     message = 'You should be an active member in the organization.'
