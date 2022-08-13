@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2021-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -114,7 +114,7 @@ function ExportDatasetModal(): JSX.Element {
                     label='Export format'
                     rules={[{ required: true, message: 'Format must be selected' }]}
                 >
-                    <Select placeholder='Select dataset format' className='cvat-modal-export-select'>
+                    <Select virtual={false} placeholder='Select dataset format' className='cvat-modal-export-select'>
                         {dumpers
                             .sort((a: any, b: any) => a.name.localeCompare(b.name))
                             .filter((dumper: any): boolean => dumper.dimension === instance?.dimension)

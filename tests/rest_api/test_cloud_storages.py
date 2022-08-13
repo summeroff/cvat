@@ -6,8 +6,9 @@ import pytest
 from http import HTTPStatus
 from deepdiff import DeepDiff
 
-from .utils.config import get_method, patch_method, post_method
+from rest_api.utils.config import get_method, patch_method, post_method
 
+@pytest.mark.usefixtures('dontchangedb')
 class TestGetCloudStorage:
 
     def _test_can_see(self, user, storage_id, data, **kwargs):
@@ -16,7 +17,8 @@ class TestGetCloudStorage:
         response_data = response_data.get('results', response_data)
 
         assert response.status_code == HTTPStatus.OK
-        assert DeepDiff(data, response_data, ignore_order=True) == {}
+        assert DeepDiff(data, response_data, ignore_order=True,
+            exclude_paths="root['updated_date']") == {}
 
     def _test_cannot_see(self, user, storage_id, **kwargs):
         response = get_method(user, f'cloudstorages/{storage_id}', **kwargs)
@@ -59,7 +61,8 @@ class TestGetCloudStorage:
             self._test_cannot_see(username, storage_id, org_id=org_id)
 
 
-class TestPostCloudStorage:
+@pytest.mark.usefixtures('changedb')
+class TestPostCloudStorage():
     _SPEC = {
         'provider_type': 'AWS_S3_BUCKET',
         'resource': 'test',
@@ -120,6 +123,7 @@ class TestPostCloudStorage:
         else:
             self._test_cannot_create(username, self._SPEC, org_id=org_id)
 
+@pytest.mark.usefixtures('changedb')
 class TestPatchCloudStorage:
     _SPEC = {
         'display_name': 'New display name',
@@ -127,6 +131,14 @@ class TestPatchCloudStorage:
         'manifests': [
             'manifest_1.jsonl',
             'manifest_2.jsonl',
+        ],
+    }
+    _PRIVATE_BUCKET_SPEC = {
+        'display_name': 'New display name',
+        'description': 'New description',
+        'manifests': [
+            'sub/manifest_1.jsonl',
+            'sub/manifest_2.jsonl',
         ],
     }
     _EXCLUDE_PATHS = [
@@ -142,7 +154,7 @@ class TestPatchCloudStorage:
         response_data = response_data.get('results', response_data)
 
         assert response.status_code == HTTPStatus.OK
-        assert DeepDiff(self._SPEC, response_data, ignore_order=True,
+        assert DeepDiff(spec, response_data, ignore_order=True,
             exclude_paths=self._EXCLUDE_PATHS) == {}
 
         assert response.status_code == HTTPStatus.OK
@@ -177,12 +189,12 @@ class TestPatchCloudStorage:
         ('maintainer', False, True),
         ('supervisor', False, False),
     ])
-    def test_org_user_update_coud_storage(self, org_id, storage_id, role, is_owner, is_allow, find_users, cloud_storages):
+    def test_org_user_update_cloud_storage(self, org_id, storage_id, role, is_owner, is_allow, find_users, cloud_storages):
         cloud_storage = cloud_storages[storage_id]
         username = cloud_storage['owner']['username'] if is_owner else \
             next((u for u in find_users(role=role, org=org_id) if u['id'] != cloud_storage['owner']['id']))['username']
 
         if is_allow:
-            self._test_can_update(username, storage_id, self._SPEC, org_id=org_id)
+            self._test_can_update(username, storage_id, self._PRIVATE_BUCKET_SPEC, org_id=org_id)
         else:
-            self._test_cannot_update(username, storage_id, self._SPEC, org_id=org_id)
+            self._test_cannot_update(username, storage_id, self._PRIVATE_BUCKET_SPEC, org_id=org_id)
