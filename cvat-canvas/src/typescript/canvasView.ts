@@ -1048,7 +1048,7 @@ export class CanvasViewImpl implements CanvasView, Listener {
         // Setup grid
         this.grid.setAttribute('id', 'cvat_canvas_grid');
         this.grid.setAttribute('version', '2');
-        this.gridPath.setAttribute('d', 'M 1000 0 L 0 0 0 1000');
+        this.gridPath.setAttribute('d', 'M 3000 0 L 0 0 0 3000');
         this.gridPath.setAttribute('fill', 'none');
         this.gridPath.setAttribute('stroke-width', `${consts.BASE_GRID_WIDTH}`);
         this.gridPath.setAttribute('opacity', 'inherit');
@@ -1354,9 +1354,20 @@ export class CanvasViewImpl implements CanvasView, Listener {
         } else if (reason === UpdateReasons.ISSUE_REGIONS_UPDATED) {
             this.setupIssueRegions(this.controller.issueRegions);
         } else if (reason === UpdateReasons.GRID_UPDATED) {
-            const size: Size = this.geometry.grid;
-            this.gridPattern.setAttribute('width', `${size.width}`);
-            this.gridPattern.setAttribute('height', `${size.height}`);
+            let grid_size: Size = this.geometry.grid;
+            const image_size: Size = this.geometry.image;
+
+            if(grid_size.width==5) {
+                grid_size.width = image_size.width/2;
+                grid_size.height = image_size.height/2;
+            } else if(grid_size.height==6) {
+                grid_size.width = image_size.width/3;
+                grid_size.height = image_size.height/3;
+            }
+
+            this.gridPattern.setAttribute('width', `${grid_size.width}`);
+            this.gridPattern.setAttribute('height', `${grid_size.height}`);
+
         } else if (reason === UpdateReasons.SHAPE_FOCUSED) {
             const { padding, clientID } = this.controller.focusData;
             const object = this.svgShapes[clientID];
