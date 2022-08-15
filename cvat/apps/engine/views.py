@@ -785,7 +785,6 @@ class TaskViewSet(UploadMixin, AnnotationMixin, viewsets.ModelViewSet, Serialize
             assert instance.organization == db_project.organization
 
     def perform_destroy(self, instance):
-        self._validate_export_limit(owner=self.request.user)
         task_dirname = instance.get_dirname()
         super().perform_destroy(instance)
         shutil.rmtree(task_dirname, ignore_errors=True)
@@ -1020,7 +1019,6 @@ class TaskViewSet(UploadMixin, AnnotationMixin, viewsets.ModelViewSet, Serialize
         serializer_class=LabeledDataSerializer(required=False))
     def annotations(self, request, pk):
         self._object = self.get_object() # force to call check_object_permissions
-        self._validate_export_limit(owner=self.request.user)
         if request.method == 'GET':
             return self.export_annotations(
                 request=request,
@@ -1189,7 +1187,6 @@ class TaskViewSet(UploadMixin, AnnotationMixin, viewsets.ModelViewSet, Serialize
         url_path='dataset')
     def dataset_export(self, request, pk):
         self._object = self.get_object() # force to call check_object_permissions
-        self._validate_export_limit(owner=self.request.user)
         return self.export_annotations(
             request=request,
             pk=pk,
