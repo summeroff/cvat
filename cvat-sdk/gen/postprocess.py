@@ -1,12 +1,13 @@
-#!/usr/bin/env python
-# Copyright (C) 2022 Intel Corporation
+#!/usr/bin/env python3
+
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
+import argparse
 import os.path as osp
 import re
 import sys
-from argparse import ArgumentParser
 from glob import glob
 
 from inflection import underscore
@@ -18,14 +19,17 @@ def collect_operations(schema):
 
     operations = {}
 
-    for _, endpoint_schema in endpoints.items():
-        for _, method_schema in endpoint_schema.items():
+    for endpoint_name, endpoint_schema in endpoints.items():
+        for method_name, method_schema in endpoint_schema.items():
+            method_schema = dict(method_schema)
+            method_schema["method"] = method_name
+            method_schema["endpoint"] = endpoint_name
             operations[method_schema["operationId"]] = method_schema
 
     return operations
 
 
-class Processor:
+class Replacer:
     REPLACEMENT_TOKEN = r"%%%"
     ARGS_TOKEN = r"!!!"
 
@@ -37,11 +41,15 @@ class Processor:
         operation = self._operations[name]
 
         new_name = name
-        for tag in operation.get("tags", []):
-            prefix = tag + "_"
-            if new_name.startswith(prefix):
-                new_name = new_name[len(prefix) :]
-                break
+
+        tokenized_path = operation["endpoint"].split("/")
+        assert 3 <= len(tokenized_path)
+        assert tokenized_path[0] == "" and tokenized_path[1] == "api"
+        tokenized_path = tokenized_path[2:]
+
+        prefix = tokenized_path[0] + "_"
+        if new_name.startswith(prefix) and tokenized_path[0] in operation["tags"]:
+            new_name = new_name[len(prefix) :]
 
         return new_name
 
@@ -69,7 +77,7 @@ class Processor:
 
     def _process_file(self, contents: str):
         processor_pattern = re.compile(
-            f"{self.REPLACEMENT_TOKEN}(.*?){self.ARGS_TOKEN}(.*){self.REPLACEMENT_TOKEN}"
+            f"{self.REPLACEMENT_TOKEN}(.*?){self.ARGS_TOKEN}(.*?){self.REPLACEMENT_TOKEN}"
         )
 
         matches = list(processor_pattern.finditer(contents))
@@ -94,12 +102,12 @@ class Processor:
         with open(src_path, "w") as f:
             f.write(contents)
 
-    def process_dir(self, dir_path: str):
-        for filename in glob(dir_path + "/**/*.py", recursive=True):
+    def process_dir(self, dir_path: str, *, file_ext: str = ".py"):
+        for filename in glob(dir_path + f"/**/*{file_ext}", recursive=True):
             try:
                 self.process_file(filename)
             except Exception as e:
-                print(f"Failed to process file '{osp.basename(filename)}': {e}")
+                raise RuntimeError(f"Failed to process file {filename!r}") from e
 
 
 def parse_schema(path):
@@ -109,26 +117,36 @@ def parse_schema(path):
 
 
 def parse_args(args=None):
-    parser = ArgumentParser(
+    parser = argparse.ArgumentParser(
         add_help=True,
-        description="""
-        Processes generator output files in a custom way, saves results inplace.
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
+Processes generator output files in a custom way, saves results inplace.
 
-        Replacement token: '%(repl_token)s'.
-        Args separator token: '%(args_token)s'.
-        Replaces the following patterns in python files:
-            '%(repl_token)sREPLACER%(args_token)sARG1%(args_token)sARG2...%(repl_token)s'
-            ->
-            REPLACER(ARG1, ARG2, ...) value
+Replacement token: '%(repl_token)s'.
+Arg separator token: '%(args_token)s'.
+Replaces the following patterns in files:
+    '%(repl_token)sREPLACER%(args_token)sARG1%(args_token)sARG2...%(repl_token)s'
+    ->
+    REPLACER(ARG1, ARG2, ...) value
 
+Available REPLACERs:
+    %(replacers)s
         """
         % {
-            "repl_token": Processor.REPLACEMENT_TOKEN,
-            "args_token": Processor.ARGS_TOKEN,
+            "repl_token": Replacer.REPLACEMENT_TOKEN,
+            "args_token": Replacer.ARGS_TOKEN,
+            "replacers": "\n    ".join(Replacer.allowed_actions),
         },
     )
-    parser.add_argument("--schema", required=True)
-    parser.add_argument("--input-path", required=True)
+    parser.add_argument("--schema", required=True, help="Path to server schema yaml")
+    parser.add_argument("--input-path", required=True, help="Path to target file or directory")
+    parser.add_argument(
+        "--file-ext",
+        default=".py",
+        help="If working on a directory, look for "
+        "files with the specified extension (default: %(default)s)",
+    )
 
     return parser.parse_args(args)
 
@@ -137,12 +155,14 @@ def main(args=None):
     args = parse_args(args)
 
     schema = parse_schema(args.schema)
-    processor = Processor(schema=schema)
+    processor = Replacer(schema=schema)
 
     if osp.isdir(args.input_path):
-        processor.process_dir(args.input_path)
+        processor.process_dir(args.input_path, file_ext=args.file_ext)
     elif osp.isfile(args.input_path):
         processor.process_file(args.input_path)
+    else:
+        return f"error: input {args.input_path} is neither a file nor a directory"
 
     return 0
 

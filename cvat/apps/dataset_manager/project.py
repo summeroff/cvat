@@ -1,7 +1,10 @@
 # Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2023 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
+import os
+from tempfile import TemporaryDirectory
 import rq
 from typing import Any, Callable, List, Mapping, Tuple
 
@@ -127,12 +130,16 @@ class ProjectAnnotationAndData:
             db_project=self.db_project,
             host=host
         )
-        exporter(dst_file, project_data, **options)
+
+        temp_dir_base = self.db_project.get_tmp_dirname()
+        os.makedirs(temp_dir_base, exist_ok=True)
+        with TemporaryDirectory(dir=temp_dir_base) as temp_dir:
+            exporter(dst_file, temp_dir, project_data, **options)
 
     def load_dataset_data(self, *args, **kwargs):
         load_dataset_data(self, *args, **kwargs)
 
-    def import_dataset(self, dataset_file, importer):
+    def import_dataset(self, dataset_file, importer, **options):
         project_data = ProjectData(
             annotation_irs=self.annotation_irs,
             db_project=self.db_project,
@@ -141,7 +148,10 @@ class ProjectAnnotationAndData:
         )
         project_data.soft_attribute_import = True
 
-        importer(dataset_file, project_data, self.load_dataset_data)
+        temp_dir_base = self.db_project.get_tmp_dirname()
+        os.makedirs(temp_dir_base, exist_ok=True)
+        with TemporaryDirectory(dir=temp_dir_base) as temp_dir:
+            importer(dataset_file, temp_dir, project_data, self.load_dataset_data, **options)
 
         self.create({tid: ir.serialize() for tid, ir in self.annotation_irs.items() if tid in project_data.new_tasks})
 
@@ -150,7 +160,7 @@ class ProjectAnnotationAndData:
         raise NotImplementedError()
 
 @transaction.atomic
-def import_dataset_as_project(project_id, dataset_file, format_name):
+def import_dataset_as_project(project_id, dataset_file, format_name, conv_mask_to_poly):
     rq_job = rq.get_current_job()
     rq_job.meta['status'] = 'Dataset import has been started...'
     rq_job.meta['progress'] = 0.
@@ -161,4 +171,4 @@ def import_dataset_as_project(project_id, dataset_file, format_name):
 
     importer = make_importer(format_name)
     with open(dataset_file, 'rb') as f:
-        project.import_dataset(f, importer)
+        project.import_dataset(f, importer, conv_mask_to_poly=conv_mask_to_poly)

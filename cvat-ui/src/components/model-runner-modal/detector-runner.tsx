@@ -1,4 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,27 +8,28 @@ import React, { useState } from 'react';
 import { Row, Col } from 'antd/lib/grid';
 import { DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import Select, { BaseOptionType } from 'antd/lib/select';
-import Checkbox, { CheckboxChangeEvent } from 'antd/lib/checkbox';
 import Tag from 'antd/lib/tag';
 import Text from 'antd/lib/typography/Text';
 import InputNumber from 'antd/lib/input-number';
 import Button from 'antd/lib/button';
+import Switch from 'antd/lib/switch';
 import notification from 'antd/lib/notification';
 
-import { Model, ModelAttribute, StringObject } from 'reducers/interfaces';
+import { ModelAttribute, StringObject } from 'reducers';
 
 import CVATTooltip from 'components/common/cvat-tooltip';
-import { Label as LabelInterface } from 'components/labels-editor/common';
 import { clamp } from 'utils/math';
-import consts from 'consts';
-import { DimensionType } from '../../reducers/interfaces';
+import config from 'config';
+import {
+    MLModel, ModelKind, ModelReturnType, DimensionType, Label as LabelInterface,
+} from 'cvat-core-wrapper';
 
 interface Props {
     withCleanup: boolean;
-    models: Model[];
+    models: MLModel[];
     labels: LabelInterface[];
     dimension: DimensionType;
-    runInference(model: Model, body: object): void;
+    runInference(model: MLModel, body: object): void;
 }
 
 interface MappedLabel {
@@ -40,6 +42,7 @@ type MappedLabelsList = Record<string, MappedLabel>;
 export interface DetectorRequestBody {
     mapping: MappedLabelsList;
     cleanup: boolean;
+    convMaskToPoly: boolean;
 }
 
 interface Match {
@@ -57,19 +60,25 @@ function DetectorRunner(props: Props): JSX.Element {
     const [threshold, setThreshold] = useState<number>(0.5);
     const [distance, setDistance] = useState<number>(50);
     const [cleanup, setCleanup] = useState<boolean>(false);
+    const [convertMasksToPolygons, setConvertMasksToPolygons] = useState<boolean>(false);
     const [match, setMatch] = useState<Match>({ model: null, task: null });
     const [attrMatches, setAttrMatch] = useState<Record<string, Match>>({});
 
     const model = models.filter((_model): boolean => _model.id === modelID)[0];
-    const isDetector = model && model.type === 'detector';
-    const isReId = model && model.type === 'reid';
+    const isDetector = model && model.kind === ModelKind.DETECTOR;
+    const isReId = model && model.kind === ModelKind.REID;
+    const isClassifier = model && model.kind === ModelKind.CLASSIFIER;
+    const convertMasksToPolygonsAvailable = isDetector &&
+                    (!model.returnType || model.returnType === ModelReturnType.MASK);
     const buttonEnabled =
-        model && (model.type === 'reid' || (model.type === 'detector' && !!Object.keys(mapping).length));
+        model && (model.kind === ModelKind.REID ||
+            (model.kind === ModelKind.DETECTOR && !!Object.keys(mapping).length) ||
+            (model.kind === ModelKind.CLASSIFIER && !!Object.keys(mapping).length));
+    const canHaveMapping = isDetector || isClassifier;
+    const modelLabels = (canHaveMapping ? model.labels : []).filter((_label: string): boolean => !(_label in mapping));
+    const taskLabels = canHaveMapping ? labels.map((label: any): string => label.name) : [];
 
-    const modelLabels = (isDetector ? model.labels : []).filter((_label: string): boolean => !(_label in mapping));
-    const taskLabels = isDetector ? labels.map((label: any): string => label.name) : [];
-
-    if (model && model.type !== 'reid' && !model.labels.length) {
+    if (model && model.kind === ModelKind.REID && !model.labels.length) {
         notification.warning({
             message: 'The selected model does not include any labels',
         });
@@ -221,8 +230,8 @@ function DetectorRunner(props: Props): JSX.Element {
                 <Col span={4}>Model:</Col>
                 <Col span={20}>
                     <Select
-                        placeholder={dimension === DimensionType.DIM_2D ? 'Select a model' : 'No models available'}
-                        disabled={dimension !== DimensionType.DIM_2D}
+                        placeholder={dimension === DimensionType.DIMENSION_2D ? 'Select a model' : 'No models available'}
+                        disabled={dimension !== DimensionType.DIMENSION_2D}
                         style={{ width: '100%' }}
                         onChange={(_modelID: string): void => {
                             const chosenModel = models.filter((_model): boolean => _model.id === _modelID)[0];
@@ -239,7 +248,6 @@ function DetectorRunner(props: Props): JSX.Element {
                                     return acc;
                                 }, {},
                             );
-
                             setMapping(defaultMapping);
                             setMatch({ model: null, task: null });
                             setAttrMatch({});
@@ -247,7 +255,7 @@ function DetectorRunner(props: Props): JSX.Element {
                         }}
                     >
                         {models.map(
-                            (_model: Model): JSX.Element => (
+                            (_model: MLModel): JSX.Element => (
                                 <Select.Option value={_model.id} key={_model.id}>
                                     {_model.name}
                                 </Select.Option>
@@ -256,14 +264,14 @@ function DetectorRunner(props: Props): JSX.Element {
                     </Select>
                 </Col>
             </Row>
-            {isDetector &&
+            {canHaveMapping &&
                 Object.keys(mapping).length ?
                 Object.keys(mapping).map((modelLabel: string) => {
                     const label = labels
                         .find((_label: LabelInterface): boolean => (
                             _label.name === mapping[modelLabel].name)) as LabelInterface;
 
-                    const color = label ? label.color : consts.NEW_LABEL_COLOR;
+                    const color = label ? label.color : config.NEW_LABEL_COLOR;
                     const notMatchedModelAttributes = model.attributes[modelLabel]
                         .filter((_attribute: ModelAttribute): boolean => (
                             !(_attribute.name in (mapping[modelLabel].attributes || {}))
@@ -290,7 +298,7 @@ function DetectorRunner(props: Props): JSX.Element {
                                 Object.keys(mapping[modelLabel].attributes || {})
                                     .map((mappedModelAttr: string) => (
                                         renderMappingRow(
-                                            consts.NEW_LABEL_COLOR,
+                                            config.NEW_LABEL_COLOR,
                                             mappedModelAttr,
                                             mapping[modelLabel].attributes[mappedModelAttr],
                                             'Remove the mapped attribute',
@@ -335,7 +343,7 @@ function DetectorRunner(props: Props): JSX.Element {
                         </React.Fragment>
                     );
                 }) : null}
-            {isDetector && !!taskLabels.length && !!modelLabels.length ? (
+            {canHaveMapping && !!taskLabels.length && !!modelLabels.length ? (
                 <>
                     <Row justify='start' align='middle'>
                         <Col span={10}>
@@ -352,14 +360,24 @@ function DetectorRunner(props: Props): JSX.Element {
                     </Row>
                 </>
             ) : null}
+            {convertMasksToPolygonsAvailable && (
+                <div className='detector-runner-convert-masks-to-polygons-wrapper'>
+                    <Switch
+                        checked={convertMasksToPolygons}
+                        onChange={(checked: boolean) => {
+                            setConvertMasksToPolygons(checked);
+                        }}
+                    />
+                    <Text>Convert masks to polygons</Text>
+                </div>
+            )}
             {isDetector && withCleanup ? (
-                <div>
-                    <Checkbox
+                <div className='detector-runner-clean-previous-annotations-wrapper'>
+                    <Switch
                         checked={cleanup}
-                        onChange={(e: CheckboxChangeEvent): void => setCleanup(e.target.checked)}
-                    >
-                        Clean old annotations
-                    </Checkbox>
+                        onChange={(checked: boolean): void => setCleanup(checked)}
+                    />
+                    <Text>Clean previous annotations</Text>
                 </div>
             ) : null}
             {isReId ? (
@@ -408,21 +426,29 @@ function DetectorRunner(props: Props): JSX.Element {
             <Row align='middle' justify='end'>
                 <Col>
                     <Button
+                        className='cvat-inference-run-button'
                         disabled={!buttonEnabled}
                         type='primary'
                         onClick={() => {
-                            const detectorRequestBody: DetectorRequestBody = {
-                                mapping,
-                                cleanup,
-                            };
-
-                            runInference(
-                                model,
-                                model.type === 'detector' ? detectorRequestBody : {
+                            let requestBody: object = {};
+                            if (model.kind === ModelKind.DETECTOR) {
+                                requestBody = {
+                                    mapping,
+                                    cleanup,
+                                    convMaskToPoly: convertMasksToPolygons,
+                                };
+                            } else if (model.kind === ModelKind.REID) {
+                                requestBody = {
                                     threshold,
                                     max_distance: distance,
-                                },
-                            );
+                                };
+                            } else if (model.kind === ModelKind.CLASSIFIER) {
+                                requestBody = {
+                                    mapping,
+                                };
+                            }
+
+                            runInference(model, requestBody);
                         }}
                     >
                         Annotate

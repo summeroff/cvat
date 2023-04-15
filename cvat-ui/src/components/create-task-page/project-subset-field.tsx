@@ -5,8 +5,8 @@
 import React, { useEffect, useState } from 'react';
 import Autocomplete from 'antd/lib/auto-complete';
 
-import consts from 'consts';
-import getCore from 'cvat-core-wrapper';
+import config from 'config';
+import { getCore } from 'cvat-core-wrapper';
 
 const core = getCore();
 
@@ -38,7 +38,7 @@ export default function ProjectSubsetField(props: Props): JSX.Element {
                     setInternalSubsets(
                         new Set([
                             ...(internalValue ? [internalValue] : []),
-                            ...consts.DEFAULT_PROJECT_SUBSETS,
+                            ...config.DEFAULT_PROJECT_SUBSETS,
                             ...project.subsets,
                         ]),
                     );
@@ -48,7 +48,7 @@ export default function ProjectSubsetField(props: Props): JSX.Element {
             setInternalSubsets(
                 new Set([
                     ...(internalValue ? [internalValue] : []),
-                    ...consts.DEFAULT_PROJECT_SUBSETS,
+                    ...config.DEFAULT_PROJECT_SUBSETS,
                     ...(projectSubsets || []),
                 ]),
             );

@@ -9,6 +9,7 @@ import sys  # noqa: F401
 
 from {{packageName}}.model_utils import (  # noqa: F401
     ApiTypeError,
+    IModelData,
     ModelComposed,
     ModelNormal,
     ModelSimple,
@@ -27,8 +28,8 @@ from {{packageName}}.exceptions import ApiAttributeError
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     # Enable introspection. Can't work normally due to cyclic imports
-    from cvat_sdk.apis import *
-    from cvat_sdk.models import *
+    from {{packageName}}.apis import *
+    from {{packageName}}.models import *
 
 {{#models}}
 {{#model}}

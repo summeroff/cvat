@@ -1,33 +1,56 @@
 #!/bin/sh
 
+# Copyright (C) 2022 CVAT.ai Corporation
+#
+# SPDX-License-Identifier: MIT
+
 set -e
 
-VERSION="2.0-alpha"
-LIB_NAME="cvat_sdk"
-DST_DIR="."
-TEMPLATE_DIR="gen"
-PYTHON_POST_PROCESS_FILE="${TEMPLATE_DIR}/postprocess.py"
+GENERATOR_VERSION="v6.0.1"
 
-mkdir -p "${DST_DIR}/"
-rm -f -r "${DST_DIR}/docs/" "${DST_DIR}/${LIB_NAME}"
-cp "${TEMPLATE_DIR}/templates/openapi-generator/.openapi-generator-ignore" "${DST_DIR}/"
+VERSION="2.4.0.post1"
+LIB_NAME="cvat_sdk"
+LAYER1_LIB_NAME="${LIB_NAME}/api_client"
+DST_DIR="$(cd "$(dirname -- "$0")/.." && pwd)"
+DOCS_DIR="$DST_DIR/docs"
+GEN_DIR="${DST_DIR}/gen"
+POST_PROCESS_SCRIPT="${GEN_DIR}/postprocess.py"
+SCHEMA_PATH="${DST_DIR}/../cvat/schema.yml"
+
+rm -f -r "$DOCS_DIR" "${DST_DIR}/${LAYER1_LIB_NAME}" \
+    "${DST_DIR}/requirements/api_client.txt"
 
 # Pass template dir here
 # https://github.com/OpenAPITools/openapi-generator/issues/8420
-docker run --rm -v "$PWD":"/local" \
-    openapitools/openapi-generator-cli generate \
-        -t "/local/${TEMPLATE_DIR}/templates/openapi-generator/" \
-        -i "/local/schema/schema.yml" \
-        --config "/local/${TEMPLATE_DIR}/generator-config.yml" \
+docker run --rm -u "$(id -u)":"$(id -g)" \
+    -v "${SCHEMA_PATH}:/mnt/schema.yml:ro" \
+    -v "${GEN_DIR}:/mnt/gen:ro" \
+    -v "${DST_DIR}:/mnt/dst" \
+    openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
+        -t "/mnt/gen/templates/openapi-generator/" \
+        -i "/mnt/schema.yml" \
+        --config "/mnt/gen/generator-config.yml" \
+        -p "packageVersion=$VERSION" \
+        -p "httpUserAgent=cvat_sdk/$VERSION" \
         -g python \
-        -o "/local/${DST_DIR}/"
-sudo chown -R "$(id -u)":"$(id -g)" "${DST_DIR}/"
+        -o "/mnt/dst"
 
-sed -e "s|{{packageVersion}}|${VERSION}|g" "${TEMPLATE_DIR}/templates/version.py.template" > "${DST_DIR}/${LIB_NAME}/version.py"
-cp -r "${TEMPLATE_DIR}/templates/requirements/" "${DST_DIR}/"
-cp -r "${TEMPLATE_DIR}/templates/MANIFEST.in" "${DST_DIR}/"
+echo "VERSION = \"$VERSION\"" > "${DST_DIR}/${LIB_NAME}/version.py"
+mv "${DST_DIR}/requirements.txt" "${DST_DIR}/requirements/api_client.txt"
 
-# Do custom postprocessing
-"${PYTHON_POST_PROCESS_FILE}" --schema "schema/schema.yml" --input-path "${DST_DIR}/${LIB_NAME}"
-black --config pyproject.toml "${DST_DIR}/${LIB_NAME}"
-isort --sp pyproject.toml "${DST_DIR}/${LIB_NAME}"
+API_DOCS_DIR="${DOCS_DIR}/apis/"
+MODEL_DOCS_DIR="${DOCS_DIR}/models/"
+mkdir "${API_DOCS_DIR}"
+mkdir "${MODEL_DOCS_DIR}"
+mv "${DOCS_DIR}/"*Api.md "${API_DOCS_DIR}"
+mv "${DOCS_DIR}/"*.md "${MODEL_DOCS_DIR}"
+mv "${DST_DIR}/api_summary.md" "${DOCS_DIR}"
+
+# Do custom postprocessing for code files
+"${POST_PROCESS_SCRIPT}" --schema "${SCHEMA_PATH}" \
+    --input-path "${DST_DIR}/${LIB_NAME}"
+
+# Do custom postprocessing for docs files
+"${POST_PROCESS_SCRIPT}" --schema "${SCHEMA_PATH}" \
+    --input-path "$DOCS_DIR" --file-ext '.md'
+

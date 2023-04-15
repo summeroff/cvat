@@ -1,5 +1,6 @@
 
 # Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -20,11 +21,12 @@ from rest_framework.test import APIClient, APITestCase
 
 import cvat.apps.dataset_manager as dm
 from cvat.apps.dataset_manager.annotation import AnnotationIR
-from cvat.apps.dataset_manager.bindings import (CvatTaskDataExtractor,
+from cvat.apps.dataset_manager.bindings import (CvatTaskOrJobDataExtractor,
                                                 TaskData, find_dataset_root)
 from cvat.apps.dataset_manager.task import TaskAnnotation
 from cvat.apps.dataset_manager.util import make_zip_archive
 from cvat.apps.engine.models import Task
+from cvat.apps.engine.tests.utils import get_paginated_collection
 
 
 def generate_image_file(filename, size=(100, 100)):
@@ -94,6 +96,13 @@ class _DbTestBase(APITestCase):
             assert response.status_code == status.HTTP_202_ACCEPTED, response.status_code
 
             response = self.client.get("/api/tasks/%s" % tid)
+
+            if 200 <= response.status_code < 400:
+                labels_response = list(get_paginated_collection(
+                    lambda page: self.client.get("/api/labels?task_id=%s&page=%s" % (tid, page))
+                ))
+                response.data["labels"] = labels_response
+
             task = response.data
 
         return task
@@ -275,6 +284,7 @@ class TaskExportTest(_DbTestBase):
         self.assertEqual({f.DISPLAY_NAME for f in formats},
         {
             'COCO 1.0',
+            'COCO Keypoints 1.0',
             'CVAT for images 1.1',
             'CVAT for video 1.1',
             'Datumaro 1.0',
@@ -308,6 +318,7 @@ class TaskExportTest(_DbTestBase):
         self.assertEqual({f.DISPLAY_NAME for f in formats},
         {
             'COCO 1.0',
+            'COCO Keypoints 1.0',
             'CVAT 1.1',
             'LabelMe 3.0',
             'MOT 1.1',
@@ -360,6 +371,7 @@ class TaskExportTest(_DbTestBase):
 
         for format_name, importer_name in [
             ('COCO 1.0', 'coco'),
+            ('COCO Keypoints 1.0', 'coco_person_keypoints'),
             ('CVAT for images 1.1', 'cvat'),
             # ('CVAT for video 1.1', 'cvat'), # does not support
             ('Datumaro 1.0', 'datumaro'),
@@ -413,7 +425,7 @@ class TaskExportTest(_DbTestBase):
         task_ann.init_from_db()
         task_data = TaskData(task_ann.ir_data, Task.objects.get(pk=task["id"]))
 
-        extractor = CvatTaskDataExtractor(task_data)
+        extractor = CvatTaskOrJobDataExtractor(task_data)
         dm_dataset = datumaro.components.project.Dataset.from_extractors(extractor)
         self.assertEqual(4, len(dm_dataset.get("image_1").annotations))
 
@@ -436,7 +448,7 @@ class TaskExportTest(_DbTestBase):
         images = self._generate_task_images(3)
         images['frame_filter'] = 'step=2'
         task = self._generate_task(images)
-        task_data = TaskData(AnnotationIR(), Task.objects.get(pk=task['id']))
+        task_data = TaskData(AnnotationIR('2d'), Task.objects.get(pk=task['id']),)
 
         with self.assertRaisesRegex(ValueError, r'Unknown'):
             task_data.rel_frame_id(1) # the task has only 0 and 2 frames
@@ -446,7 +458,7 @@ class TaskExportTest(_DbTestBase):
         images['frame_filter'] = 'step=2'
         images['start_frame'] = 1
         task = self._generate_task(images)
-        task_data = TaskData(AnnotationIR(), Task.objects.get(pk=task['id']))
+        task_data = TaskData(AnnotationIR('2d'), Task.objects.get(pk=task['id']))
 
         self.assertEqual(2, task_data.rel_frame_id(5))
 
@@ -454,7 +466,7 @@ class TaskExportTest(_DbTestBase):
         images = self._generate_task_images(3)
         images['frame_filter'] = 'step=2'
         task = self._generate_task(images)
-        task_data = TaskData(AnnotationIR(), Task.objects.get(pk=task['id']))
+        task_data = TaskData(AnnotationIR('2d'), Task.objects.get(pk=task['id']))
 
         with self.assertRaisesRegex(ValueError, r'Unknown'):
             task_data.abs_frame_id(2) # the task has only 0 and 1 indices
@@ -464,15 +476,22 @@ class TaskExportTest(_DbTestBase):
         images['frame_filter'] = 'step=2'
         images['start_frame'] = 1
         task = self._generate_task(images)
-        task_data = TaskData(AnnotationIR(), Task.objects.get(pk=task['id']))
+        task_data = TaskData(AnnotationIR('2d'), Task.objects.get(pk=task['id']))
 
         self.assertEqual(5, task_data.abs_frame_id(2))
+
+    def _get_task_jobs(self, tid):
+        with ForceLogin(self.user, self.client):
+            return get_paginated_collection(lambda page: self.client.get(
+                '/api/jobs?task_id=%s&page=%s' % (tid, page), format="json"
+            ))
 
     def test_frames_outside_are_not_generated(self):
         # https://github.com/openvinotoolkit/cvat/issues/2827
         images = self._generate_task_images(10)
         images['start_frame'] = 0
         task = self._generate_task(images, overlap=3, segment_size=6)
+        jobs = sorted(self._get_task_jobs(task["id"]), key=lambda v: v["id"])
         annotations = {
             "version": 0,
             "tags": [],
@@ -497,8 +516,7 @@ class TaskExportTest(_DbTestBase):
                 },
             ]
         }
-        self._put_api_v2_job_id_annotations(
-            task["segments"][2]["jobs"][0]["id"], annotations)
+        self._put_api_v2_job_id_annotations(jobs[2]["id"], annotations)
 
         task_ann = TaskAnnotation(task["id"])
         task_ann.init_from_db()
@@ -565,7 +583,7 @@ class FrameMatchingTest(_DbTestBase):
 
         images = self._generate_task_images(task_paths)
         task = self._generate_task(images)
-        task_data = TaskData(AnnotationIR(), Task.objects.get(pk=task["id"]))
+        task_data = TaskData(AnnotationIR('2d'), Task.objects.get(pk=task["id"]))
 
         for input_path, expected, root in [
             ('z.jpg', None, ''), # unknown item
@@ -590,7 +608,7 @@ class FrameMatchingTest(_DbTestBase):
             with self.subTest(expected=expected):
                 images = self._generate_task_images(task_paths)
                 task = self._generate_task(images)
-                task_data = TaskData(AnnotationIR(),
+                task_data = TaskData(AnnotationIR('2d'),
                     Task.objects.get(pk=task["id"]))
                 dataset = [
                     datumaro.components.extractor.DatasetItem(
@@ -610,6 +628,14 @@ class TaskAnnotationsImportTest(_DbTestBase):
             "client_files[%d]" % i: generate_image_file("%s_%d.jpg" % (name, i),
                 **image_params)
             for i in range(count)
+        }
+        images["image_quality"] = 75
+        return images
+
+    def _generate_task_images_by_names(self, names, **image_params):
+        images = {
+            f"client_files[{i}]": generate_image_file(f"{name}.jpg", **image_params)
+            for i, name in enumerate(names)
         }
         images["image_quality"] = 75
         return images
@@ -898,7 +924,7 @@ class TaskAnnotationsImportTest(_DbTestBase):
             expected_ann.init_from_db()
 
             dm.task.import_task_annotations(task["id"],
-                file_path, import_format)
+                file_path, import_format, True)
             actual_ann = TaskAnnotation(task["id"])
             actual_ann.init_from_db()
 
@@ -908,7 +934,10 @@ class TaskAnnotationsImportTest(_DbTestBase):
         for f in dm.views.get_import_formats():
             format_name = f.DISPLAY_NAME
 
-            images = self._generate_task_images(3, "img0.0.0")
+            if format_name == "Market-1501 1.0":
+                images = self._generate_task_images_by_names(["img0.0.0_0", "1.0_c3s1_000000_00", "img0.0.0_1"])
+            else:
+                images = self._generate_task_images(3, "img0.0.0")
             task = self._generate_task(images, format_name)
             self._generate_annotations(task, format_name)
 
@@ -947,6 +976,6 @@ class TaskAnnotationsImportTest(_DbTestBase):
             task.update()
             task = self._create_task(task, images)
 
-            dm.task.import_task_annotations(task['id'], dataset_path, format_name)
+            dm.task.import_task_annotations(task['id'], dataset_path, format_name, True)
             self._test_can_import_annotations(task, format_name)
 

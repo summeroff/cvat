@@ -1,27 +1,42 @@
 // Copyright (C) 2019-2022 Intel Corporation
+// Copyright (C) 2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
+import { HistoryActions } from './enums';
+
 const MAX_HISTORY_LENGTH = 128;
 
-class AnnotationHistory {
+interface ActionItem {
+    action: HistoryActions;
+    undo: Function;
+    redo: Function;
+    clientIDs: number[];
+    frame: number;
+}
+
+export default class AnnotationHistory {
+    private frozen: boolean;
+    private _undo: ActionItem[];
+    private _redo: ActionItem[];
+
     constructor() {
         this.frozen = false;
         this.clear();
     }
 
-    freeze(frozen) {
+    public freeze(frozen: boolean): void {
         this.frozen = frozen;
     }
 
-    get() {
+    public get(): { undo: [HistoryActions, number][], redo: [HistoryActions, number][] } {
         return {
             undo: this._undo.map((undo) => [undo.action, undo.frame]),
             redo: this._redo.map((redo) => [redo.action, redo.frame]),
         };
     }
 
-    do(action, undo, redo, clientIDs, frame) {
+    public do(action: HistoryActions, undo: Function, redo: Function, clientIDs: number[], frame: number): void {
         if (this.frozen) return;
         const actionItem = {
             clientIDs,
@@ -36,7 +51,7 @@ class AnnotationHistory {
         this._redo = [];
     }
 
-    async undo(count) {
+    public async undo(count: number): Promise<number[]> {
         const affectedObjects = [];
         for (let i = 0; i < count; i++) {
             const action = this._undo.pop();
@@ -52,7 +67,7 @@ class AnnotationHistory {
         return affectedObjects;
     }
 
-    async redo(count) {
+    public async redo(count: number): Promise<number[]> {
         const affectedObjects = [];
         for (let i = 0; i < count; i++) {
             const action = this._redo.pop();
@@ -68,10 +83,8 @@ class AnnotationHistory {
         return affectedObjects;
     }
 
-    clear() {
+    public clear(): void {
         this._undo = [];
         this._redo = [];
     }
 }
-
-module.exports = AnnotationHistory;

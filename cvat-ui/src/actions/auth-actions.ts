@@ -1,10 +1,11 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import { ActionUnion, createAction, ThunkAction } from 'utils/redux';
 import { UserConfirmation } from 'components/register-page/register-form';
-import getCore from 'cvat-core-wrapper';
+import { getCore } from 'cvat-core-wrapper';
 import isReachable from 'utils/url-checker';
 
 const cvat = getCore();
@@ -41,7 +42,9 @@ export const authActions = {
     authorizeFailed: (error: any) => createAction(AuthActionTypes.AUTHORIZED_FAILED, { error }),
     login: () => createAction(AuthActionTypes.LOGIN),
     loginSuccess: (user: any) => createAction(AuthActionTypes.LOGIN_SUCCESS, { user }),
-    loginFailed: (error: any) => createAction(AuthActionTypes.LOGIN_FAILED, { error }),
+    loginFailed: (error: any, hasEmailVerificationBeenSent = false) => (
+        createAction(AuthActionTypes.LOGIN_FAILED, { error, hasEmailVerificationBeenSent })
+    ),
     register: () => createAction(AuthActionTypes.REGISTER),
     registerSuccess: (user: any) => createAction(AuthActionTypes.REGISTER_SUCCESS, { user }),
     registerFailed: (error: any) => createAction(AuthActionTypes.REGISTER_FAILED, { error }),
@@ -77,8 +80,7 @@ export const registerAsync = (
     firstName: string,
     lastName: string,
     email: string,
-    password1: string,
-    password2: string,
+    password: string,
     confirmations: UserConfirmation[],
 ): ThunkAction => async (dispatch) => {
     dispatch(authActions.register());
@@ -89,8 +91,7 @@ export const registerAsync = (
             firstName,
             lastName,
             email,
-            password1,
-            password2,
+            password,
             confirmations,
         );
 
@@ -100,15 +101,16 @@ export const registerAsync = (
     }
 };
 
-export const loginAsync = (username: string, password: string): ThunkAction => async (dispatch) => {
+export const loginAsync = (credential: string, password: string): ThunkAction => async (dispatch) => {
     dispatch(authActions.login());
 
     try {
-        await cvat.server.login(username, password);
+        await cvat.server.login(credential, password);
         const users = await cvat.users.get({ self: true });
         dispatch(authActions.loginSuccess(users[0]));
     } catch (error) {
-        dispatch(authActions.loginFailed(error));
+        const hasEmailVerificationBeenSent = error.message.includes('Unverified email');
+        dispatch(authActions.loginFailed(error, hasEmailVerificationBeenSent));
     }
 };
 

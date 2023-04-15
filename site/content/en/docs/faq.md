@@ -1,7 +1,7 @@
 ---
 title: 'Frequently asked questions'
 linkTitle: 'FAQ'
-weight: 20
+weight: 3
 description: 'Answers to frequently asked questions'
 ---
 
@@ -24,55 +24,25 @@ Please be patient.
   https://user-images.githubusercontent.com/40690625/180879954-44afcd95-1e94-451a-9a60-2f3bd6482cbf.gif)
 
 
-## How to update CVAT
+## How to upgrade CVAT
 
-Before updating, please follow the [backup guide](/docs/administration/advanced/backup_guide/)
+Before upgrading, please follow the [backup guide](/docs/administration/advanced/backup_guide/)
 and backup all CVAT volumes.
 
-To update CVAT, you should clone or download the new version of CVAT and rebuild the CVAT docker images as usual.
-
-```bash
-docker-compose build
-```
-
-and run containers:
-
-```bash
-docker-compose up -d
-```
-
-Sometimes the update process takes a lot of time due to changes in the database schema and data.
-You can check the current status with `docker logs cvat`.
-Please do not terminate the migration and wait till the process is complete.
-
-## Kibana app works, but no logs are displayed
-
-Make sure there aren't error messages from Elasticsearch:
-
-```bash
-docker logs cvat_elasticsearch
-```
-
-If you see errors like this:
-
-```bash
-lood stage disk watermark [95%] exceeded on [uMg9WI30QIOJxxJNDiIPgQ][uMg9WI3][/usr/share/elasticsearch/data/nodes/0] free: 116.5gb[4%], all indices on this node will be marked read-only
-```
-
-You should free up disk space or change the threshold, to do so check: [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/6.8/disk-allocator.html).
+Follow the [upgrade guide](/docs/administration/advanced/upgrade_guide/).
 
 ## How to change default CVAT hostname or port
 
-To change the hostname, simply set the `CVAT_HOST` environemnt variable
+To change the hostname, simply set the `CVAT_HOST` environment variable
 
 ```bash
 export CVAT_HOST=<YOUR_HOSTNAME_OR_IP>
 ```
-NOTE, if you're using `docker-compose` with `sudo` to run CVAT, then please add the `-E` (or `--preserve-env`)
+NOTE, if you're using `docker compose` with `sudo` to run CVAT, then please add the `-E` (or `--preserve-env`)
 flag to preserve the user environment variable which set above to take effect in your docker containers:
 
 ```bash
-sudo -E docker-compose up -d
+sudo -E docker compose up -d
 ```
 
 If you want to change the default web application port, change the `ports` part of `traefik` service configuration
@@ -101,8 +71,6 @@ Follow the Docker manual and configure the directory that you want to use as a s
 After that, it should be possible to use this directory as a CVAT share:
 
 ```yaml
-version: '3.3'
-
 services:
   cvat:
     volumes:
@@ -185,3 +153,13 @@ section.
 ## How to transfer CVAT to another machine
 
 Follow the [backup/restore guide](/docs/administration/advanced/backup_guide/#how-to-backup-all-cvat-data).
+
+## How to load your own DL model into CVAT
+
+See the information here in the [Serverless tutorial](/docs/manual/advanced/serverless-tutorial/#adding-your-own-dl-models).
+
+## My server uses a custom SSL certificate and I don't want to check it.
+
+You can call control SSL certificate check with the `--insecure` CLI argument.
+For SDK, you can specify `ssl_verify = True/False` in the `cvat_sdk.core.client.Config` object.
+

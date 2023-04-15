@@ -1,5 +1,5 @@
 # Copyright (C) 2018-2022 Intel Corporation
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) 2022-2023 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -15,14 +15,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
-import os
-import sys
 import fcntl
+import mimetypes
+import os
 import shutil
 import subprocess
-import mimetypes
-from corsheaders.defaults import default_headers
+import sys
 from distutils.util import strtobool
+from enum import Enum
+
+from corsheaders.defaults import default_headers
+from logstash_async.constants import constants as logstash_async_constants
+
+from cvat import __version__
 
 mimetypes.add_type("application/wasm", ".wasm", True)
 
@@ -52,10 +57,10 @@ except ImportError:
 def generate_ssh_keys():
     keys_dir = '{}/keys'.format(os.getcwd())
     ssh_dir = '{}/.ssh'.format(os.getenv('HOME'))
-    pidfile = os.path.join(ssh_dir, 'ssh.pid')
+    pidfile = os.path.join(keys_dir, 'ssh.pid')
 
     def add_ssh_keys():
-        IGNORE_FILES = ('README.md', 'ssh.pid')
+        IGNORE_FILES = ('README.md',)
         keys_to_add = [entry.name for entry in os.scandir(ssh_dir) if entry.name not in IGNORE_FILES]
         keys_to_add = ' '.join(os.path.join(ssh_dir, f) for f in keys_to_add)
         subprocess.run(['ssh-add {}'.format(keys_to_add)], # nosec
@@ -109,25 +114,32 @@ INSTALLED_APPS = [
     'django_rq',
     'compressor',
     'django_sendfile',
+    "dj_rest_auth",
+    'dj_rest_auth.registration',
     'dj_pagination',
+    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'drf_spectacular',
-    'dj_rest_auth',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'corsheaders',
     'allauth.socialaccount',
-    'dj_rest_auth.registration',
+    'health_check',
+    'health_check.db',
+    'health_check.contrib.migrations',
+    'health_check.contrib.psutil',
     'cvat.apps.iam',
     'cvat.apps.dataset_manager',
     'cvat.apps.organizations',
     'cvat.apps.engine',
     'cvat.apps.dataset_repo',
-    'cvat.apps.restrictions',
     'cvat.apps.lambda_manager',
     'cvat.apps.opencv',
+    'cvat.apps.webhooks',
+    'cvat.apps.health',
+    'cvat.apps.events',
 ]
 
 SITE_ID = 1
@@ -135,9 +147,6 @@ SITE_ID = 1
 REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser',
-        'cvat.apps.engine.parsers.TusUploadParser',
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'cvat.apps.engine.renderers.CVATAPIRenderer',
@@ -163,10 +172,12 @@ REST_FRAMEWORK = {
         'cvat.apps.engine.pagination.CustomPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_FILTER_BACKENDS': (
+        'cvat.apps.engine.filters.SimpleFilter',
         'cvat.apps.engine.filters.SearchFilter',
         'cvat.apps.engine.filters.OrderingFilter',
         'cvat.apps.engine.filters.JsonLogicFilter',
-        'cvat.apps.iam.filters.OrganizationFilterBackend'),
+        'cvat.apps.iam.filters.OrganizationFilterBackend',
+    ),
 
     'SEARCH_PARAM': 'search',
     # Disable default handling of the 'format' query parameter by REST framework
@@ -179,13 +190,16 @@ REST_FRAMEWORK = {
     },
     'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata',
     'DEFAULT_SCHEMA_CLASS': 'cvat.apps.iam.schema.CustomAutoSchema',
+    'EXCEPTION_HANDLER': 'cvat.apps.events.handlers.handle_viewset_exception',
 }
 
+
 REST_AUTH_REGISTER_SERIALIZERS = {
-    'REGISTER_SERIALIZER': 'cvat.apps.restrictions.serializers.RestrictedRegisterSerializer',
+    'REGISTER_SERIALIZER': 'cvat.apps.iam.serializers.RegisterSerializerEx',
 }
 
 REST_AUTH_SERIALIZERS = {
+    'LOGIN_SERIALIZER': 'cvat.apps.iam.serializers.LoginSerializerEx',
     'PASSWORD_RESET_SERIALIZER': 'cvat.apps.iam.serializers.PasswordResetSerializerEx',
 }
 
@@ -201,6 +215,8 @@ MIDDLEWARE = [
     # FIXME
     # 'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'cvat.apps.engine.middleware.RequestTrackingMiddleware',
+    'crum.CurrentRequestUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'dj_pagination.middleware.PaginationMiddleware',
@@ -228,6 +244,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
             ],
         },
     },
@@ -237,11 +254,13 @@ WSGI_APPLICATION = 'cvat.wsgi.application'
 
 # IAM settings
 IAM_TYPE = 'BASIC'
+IAM_BASE_EXCEPTION = None # a class which will be used by IAM to report errors
 IAM_DEFAULT_ROLES = ['user']
 IAM_ADMIN_ROLE = 'admin'
 # Index in the list below corresponds to the priority (0 has highest priority)
 IAM_ROLES = [IAM_ADMIN_ROLE, 'business', 'user', 'worker']
-IAM_OPA_DATA_URL = 'http://opa:8181/v1/data'
+IAM_OPA_HOST = 'http://opa:8181'
+IAM_OPA_DATA_URL = f'{IAM_OPA_HOST}/v1/data'
 LOGIN_URL = 'rest_login'
 LOGIN_REDIRECT_URL = '/'
 
@@ -256,39 +275,72 @@ AUTHENTICATION_BACKENDS = [
 
 # https://github.com/pennersr/django-allauth
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+
 # set UI url to redirect after a successful e-mail confirmation
 #changed from '/auth/login' to '/auth/email-confirmation' for email confirmation message
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/auth/email-confirmation'
+ACCOUNT_EMAIL_VERIFICATION_SENT_REDIRECT_URL = '/auth/email-verification-sent'
+INCORRECT_EMAIL_CONFIRMATION_URL = '/auth/incorrect-email-confirmation'
 
 OLD_PASSWORD_FIELD_ENABLED = True
 
 # Django-RQ
 # https://github.com/rq/django-rq
 
+class CVAT_QUEUES(Enum):
+    IMPORT_DATA = 'import'
+    EXPORT_DATA = 'export'
+    AUTO_ANNOTATION = 'annotation'
+    WEBHOOKS = 'webhooks'
+    NOTIFICATIONS = 'notifications'
+
 RQ_QUEUES = {
-    'default': {
+    CVAT_QUEUES.IMPORT_DATA.value: {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': '4h'
     },
-    'low': {
+    CVAT_QUEUES.EXPORT_DATA.value: {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': '4h'
+    },
+    CVAT_QUEUES.AUTO_ANNOTATION.value: {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': '24h'
-    }
+    },
+    CVAT_QUEUES.WEBHOOKS.value: {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': '1h'
+    },
+    CVAT_QUEUES.NOTIFICATIONS.value: {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': '1h'
+    },
 }
 
 NUCLIO = {
     'SCHEME': os.getenv('CVAT_NUCLIO_SCHEME', 'http'),
     'HOST': os.getenv('CVAT_NUCLIO_HOST', 'localhost'),
-    'PORT': os.getenv('CVAT_NUCLIO_PORT', 8070),
-    'DEFAULT_TIMEOUT': os.getenv('CVAT_NUCLIO_DEFAULT_TIMEOUT', 120)
+    'PORT': int(os.getenv('CVAT_NUCLIO_PORT', 8070)),
+    'DEFAULT_TIMEOUT': int(os.getenv('CVAT_NUCLIO_DEFAULT_TIMEOUT', 120)),
+    'FUNCTION_NAMESPACE': os.getenv('CVAT_NUCLIO_FUNCTION_NAMESPACE', 'nuclio')
 }
 
 RQ_SHOW_ADMIN_LINK = True
-RQ_EXCEPTION_HANDLERS = ['cvat.apps.engine.views.rq_handler']
+RQ_EXCEPTION_HANDLERS = [
+    'cvat.apps.engine.views.rq_exception_handler',
+    'cvat.apps.events.handlers.handle_rq_exception',
+]
 
 
 # JavaScript and CSS compression
@@ -342,10 +394,10 @@ os.makedirs(STATIC_ROOT, exist_ok=True)
 
 # Make sure to update other config files when upading these directories
 DATA_ROOT = os.path.join(BASE_DIR, 'data')
-LOGSTASH_DB = os.path.join(DATA_ROOT,'logstash.db')
+EVENTS_LOCAL_DB = os.path.join(DATA_ROOT,'events.db')
 os.makedirs(DATA_ROOT, exist_ok=True)
-if not os.path.exists(LOGSTASH_DB):
-    open(LOGSTASH_DB, 'w').close()
+if not os.path.exists(EVENTS_LOCAL_DB):
+    open(EVENTS_LOCAL_DB, 'w').close()
 
 MEDIA_DATA_ROOT = os.path.join(DATA_ROOT, 'data')
 os.makedirs(MEDIA_DATA_ROOT, exist_ok=True)
@@ -380,14 +432,19 @@ os.makedirs(CLOUD_STORAGE_ROOT, exist_ok=True)
 TMP_FILES_ROOT = os.path.join(DATA_ROOT, 'tmp')
 os.makedirs(TMP_FILES_ROOT, exist_ok=True)
 
+IAM_OPA_BUNDLE_PATH = os.path.join(STATIC_ROOT, 'opa', 'bundle.tar.gz')
+os.makedirs(Path(IAM_OPA_BUNDLE_PATH).parent, exist_ok=True)
+
+# logging is known to be unreliable with RQ when using async transports
+vector_log_handler = os.getenv('VECTOR_EVENT_HANDLER', 'AsynchronousLogstashHandler')
+
+logstash_async_constants.QUEUED_EVENTS_FLUSH_INTERVAL = 2.0
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'logstash': {
-            '()': 'logstash_async.formatter.DjangoLogstashFormatter',
-            'message_type': 'python-logstash',
-            'fqdn': False, # Fully qualified domain name. Default value: false.
+        'vector': {
+            'format': '%(message)s',
         },
         'standard': {
             'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s'
@@ -407,18 +464,18 @@ LOGGING = {
             'maxBytes': 1024*1024*50, # 50 MB
             'backupCount': 5,
         },
-        'logstash': {
+        'vector': {
             'level': 'INFO',
-            'class': 'logstash_async.handler.AsynchronousLogstashHandler',
-            'formatter': 'logstash',
+            'class': f'logstash_async.handler.{vector_log_handler}',
+            'formatter': 'vector',
             'transport': 'logstash_async.transport.HttpTransport',
             'ssl_enable': False,
             'ssl_verify': False,
             'host': os.getenv('DJANGO_LOG_SERVER_HOST', 'localhost'),
-            'port': os.getenv('DJANGO_LOG_SERVER_PORT', 8080),
+            'port': os.getenv('DJANGO_LOG_SERVER_PORT', 8282),
             'version': 1,
             'message_type': 'django',
-            'database_path': LOGSTASH_DB,
+            'database_path': EVENTS_LOCAL_DB,
         }
     },
     'loggers': {
@@ -427,33 +484,30 @@ LOGGING = {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
         },
 
-        'cvat.client': {
-            'handlers': [],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
-        },
         'django': {
             'handlers': ['console', 'server_file'],
             'level': 'INFO',
             'propagate': True
+        },
+        'vector': {
+            'handlers': [],
+            'level': 'INFO',
+            # set True for debug
+            'propagate': False
         }
     },
 }
 
 if os.getenv('DJANGO_LOG_SERVER_HOST'):
-    LOGGING['loggers']['cvat.server']['handlers'] += ['logstash']
-    LOGGING['loggers']['cvat.client']['handlers'] += ['logstash']
+    LOGGING['loggers']['vector']['handlers'] += ['vector']
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None   # this django check disabled
+DATA_UPLOAD_MAX_NUMBER_FILES = None
 LOCAL_LOAD_MAX_FILES_COUNT = 500
 LOCAL_LOAD_MAX_FILES_SIZE = 512 * 1024 * 1024  # 512 MB
 
 RESTRICTIONS = {
-    'user_agreements': [],
-
-    # this setting reduces task visibility to owner and assignee only
-    'reduce_task_visibility': False,
-
     # allow access to analytics component to users with business role
     # otherwise, only the administrator has access
     'analytics_visibility': True,
@@ -461,10 +515,14 @@ RESTRICTIONS = {
 
 # http://www.grantjenks.com/docs/diskcache/tutorial.html#djangocache
 CACHES = {
-   'default' : {
+   'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+   'media' : {
        'BACKEND' : 'diskcache.DjangoCache',
        'LOCATION' : CACHE_ROOT,
        'TIMEOUT' : None,
+       'SHARDS': 32,
        'OPTIONS' : {
             'size_limit' : 2 ** 40, # 1 Tb
        }
@@ -509,11 +567,11 @@ SPECTACULAR_SETTINGS = {
     # Statically set schema version. May also be an empty string. When used together with
     # view versioning, will become '0.0.0 (v2)' for 'v2' versioned requests.
     # Set VERSION to None if only the request version should be rendered.
-    'VERSION': 'alpha (2.0)',
+    'VERSION': __version__,
     'CONTACT': {
-        'name': 'Nikita Manovich',
-        'url': 'https://github.com/nmanovic',
-        'email': 'nikita.manovich@intel.com',
+        'name': 'CVAT.ai team',
+        'url': 'https://github.com/cvat-ai/cvat',
+        'email': 'support@cvat.ai',
     },
     'LICENSE': {
         'name': 'MIT License',
@@ -534,7 +592,7 @@ SPECTACULAR_SETTINGS = {
     'TOS': 'https://www.google.com/policies/terms/',
     'EXTERNAL_DOCS': {
         'description': 'CVAT documentation',
-        'url': 'https://cvat-ai.github.io/cvat/docs/',
+        'url': 'https://opencv.github.io/cvat/docs/',
     },
     # OTHER SETTINGS
     # https://drf-spectacular.readthedocs.io/en/latest/settings.html
@@ -557,6 +615,8 @@ SPECTACULAR_SETTINGS = {
         'JobStage': 'cvat.apps.engine.models.StageChoice',
         'StorageType': 'cvat.apps.engine.models.StorageChoice',
         'SortingMethod': 'cvat.apps.engine.models.SortingMethod',
+        'WebhookType': 'cvat.apps.webhooks.models.WebhookTypeChoice',
+        'WebhookContentType': 'cvat.apps.webhooks.models.WebhookContentTypeChoice',
     },
 
     # Coercion of {pk} to {id} is controlled by SCHEMA_COERCE_PATH_PK. Additionally,
@@ -567,3 +627,35 @@ SPECTACULAR_SETTINGS = {
     'SCHEMA_PATH_PREFIX_TRIM': False,
 }
 
+# set similar UI restrictions
+# https://github.com/opencv/cvat/blob/bad1dc2799afbb22222faaecc7336d999f4cc3fe/cvat-ui/src/utils/validation-patterns.ts#L26
+ACCOUNT_USERNAME_MIN_LENGTH = 5
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
+
+ACCOUNT_ADAPTER = 'cvat.apps.iam.adapters.DefaultAccountAdapterEx'
+
+CVAT_HOST = os.getenv('CVAT_HOST', 'localhost')
+CVAT_BASE_URL = os.getenv('CVAT_BASE_URL', f'http://{CVAT_HOST}:8080').rstrip('/')
+
+CLICKHOUSE = {
+    'events': {
+        'NAME': os.getenv('CLICKHOUSE_DB', 'cvat'),
+        'HOST': os.getenv('CLICKHOUSE_HOST', 'localhost'),
+        'PORT': os.getenv('CLICKHOUSE_PORT', 8123),
+        'USER': os.getenv('CLICKHOUSE_USER', 'user'),
+        'PASSWORD': os.getenv('CLICKHOUSE_PASSWORD', 'user'),
+    }
+}
+
+# Database
+# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.getenv('CVAT_POSTGRES_HOST', 'cvat_db'),
+        'NAME': os.getenv('CVAT_POSTGRES_DBNAME', 'cvat'),
+        'USER': os.getenv('CVAT_POSTGRES_USER', 'root'),
+        'PASSWORD': os.getenv('CVAT_POSTGRES_PASSWORD', ''),
+        'PORT': os.getenv('CVAT_POSTGRES_PORT', 5432),
+    }
+}

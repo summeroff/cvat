@@ -1,10 +1,10 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import React, { useEffect, useState } from 'react';
-import { RouteComponentProps } from 'react-router';
-import { withRouter } from 'react-router-dom';
+import { useHistory } from 'react-router';
 import { Row, Col } from 'antd/lib/grid';
 import { LoadingOutlined, QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { ColumnFilterItem } from 'antd/lib/table/interface';
@@ -15,13 +15,14 @@ import Text from 'antd/lib/typography/Text';
 import moment from 'moment';
 import copy from 'copy-to-clipboard';
 
-import { JobStage } from 'reducers/interfaces';
+import { Task, Job } from 'cvat-core-wrapper';
+import { JobStage } from 'reducers';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import UserSelector, { User } from './user-selector';
 
 interface Props {
-    taskInstance: any;
-    onJobUpdate(jobInstance: any): void;
+    task: Task;
+    onUpdateJob(jobInstance: Job): void;
 }
 
 function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
@@ -33,8 +34,8 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
             .issues(jobInstance.id)
             .then((issues: any[]) => {
                 setSummary({
-                    issues_unsolved: issues.filter((issue) => !issue.resolved_date).length,
-                    issues_resolved: issues.filter((issue) => issue.resolved_date).length,
+                    issues_unsolved: issues.filter((issue) => !issue.resolved).length,
+                    issues_resolved: issues.filter((issue) => issue.resolved).length,
                 });
             })
             .catch((_error: any) => {
@@ -81,52 +82,13 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
-function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
-    const [summary, setSummary] = useState<Record<string, any> | null>(null);
-    const [error, setError] = useState<any>(null);
-    useEffect(() => {
-        setError(null);
-        jobInstance
-            .labelingSummary()
-            .then((_summary: Record<string, any>) => {
-                setSummary(_summary);
-            })
-            .catch((_error: any) => {
-                // eslint-disable-next-line
-                console.log(_error);
-                setError(_error);
-            });
-    }, []);
-
-    if (!summary) {
-        if (error) {
-            if (error.toString().includes('403')) {
-                return <p>You do not have permissions</p>;
-            }
-
-            return <p>Could not fetch, check console output</p>;
-        }
-
-        return (
-            <>
-                <p>Loading.. </p>
-                <LoadingOutlined />
-            </>
-        );
-    }
-
-    return (
-            <Text strong>{summary.tags+summary.shapes+summary.tracks}</Text>
-    );
-}
-
-function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
+function JobListComponent(props: Props): JSX.Element {
     const {
-        taskInstance,
-        onJobUpdate,
-        history: { push },
+        task: taskInstance,
+        onUpdateJob,
     } = props;
 
+    const history = useHistory();
     const { jobs, id: taskId } = taskInstance;
 
     function sorter(path: string) {
@@ -176,10 +138,11 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
             render: (id: number): JSX.Element => (
                 <div>
                     <Button
+                        className='cvat-open-job-button'
                         type='link'
                         onClick={(e: React.MouseEvent): void => {
                             e.preventDefault();
-                            push(`/tasks/${taskId}/jobs/${id}`);
+                            history.push(`/tasks/${taskId}/jobs/${id}`);
                         }}
                         href={`/tasks/${taskId}/jobs/${id}`}
                     >
@@ -208,7 +171,7 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
                             value={stage}
                             onChange={(newValue: string) => {
                                 jobInstance.stage = newValue;
-                                onJobUpdate(jobInstance);
+                                onUpdateJob(jobInstance);
                             }}
                         >
                             <Select.Option value={JobStage.ANNOTATION}>{JobStage.ANNOTATION}</Select.Option>
@@ -275,7 +238,7 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
                     onSelect={(value: User | null): void => {
                         if (jobInstance?.assignee?.id === value?.id) return;
                         jobInstance.assignee = value;
-                        onJobUpdate(jobInstance);
+                        onUpdateJob(jobInstance);
                     }}
                 />
             ),
@@ -308,7 +271,7 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
             completed++;
         }
 
-        const created = moment(props.taskInstance.createdDate);
+        const created = moment(taskInstance.createdDate);
 
         const now = moment(moment.now());
         acc.push({
@@ -334,6 +297,7 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
                     <Text className='cvat-text-color cvat-jobs-header'> Jobs </Text>
                     <CVATTooltip trigger='click' title='Copied to clipboard!'>
                         <Button
+                            className='cvat-copy-job-details-button'
                             type='link'
                             onClick={(): void => {
                                 let serialized = '';
@@ -379,4 +343,4 @@ function JobListComponent(props: Props & RouteComponentProps): JSX.Element {
     );
 }
 
-export default withRouter(JobListComponent);
+export default React.memo(JobListComponent);

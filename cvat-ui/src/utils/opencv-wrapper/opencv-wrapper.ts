@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-import getCore from 'cvat-core-wrapper';
+import { getCore } from 'cvat-core-wrapper';
 import HistogramEqualizationImplementation, { HistogramEqualization } from './histogram-equalization';
 import TrackerMImplementation from './tracker-mil';
 import IntelligentScissorsImplementation, { IntelligentScissors } from './intelligent-scissors';
@@ -172,7 +172,7 @@ export class OpenCVWrapper {
                 model: () => new TrackerMImplementation(this.cv),
                 name: 'TrackerMIL',
                 description: 'Light client-side model useful to track simple objects',
-                type: 'opencv_tracker_mil',
+                kind: 'opencv_tracker_mil',
             },
         };
     }

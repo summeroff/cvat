@@ -1,7 +1,7 @@
 additionalProperties:
-  packageVersion: "2.0-alpha"
+  projectName: "cvat_sdk"
   packageUrl: "https://github.com/cvat-ai/cvat"
-  packageName: "cvat_sdk"
+  packageName: "cvat_sdk.api_client"
   initRequiredVars: true
   generateSourceCodeOnly: false
   generatorLanguageVersion: '>=3.7'
@@ -9,3 +9,6 @@ globalProperties:
   generateAliasAsModel: true
   apiTests: false
   modelTests: false
+files:
+  api_summary.mustache:
+    destinationFilename: api_summary.md

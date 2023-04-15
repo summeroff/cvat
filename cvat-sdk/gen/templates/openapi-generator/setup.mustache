@@ -40,7 +40,18 @@ BASE_REQUIREMENTS_FILE = "requirements/base.txt"
 
 def parse_requirements(filename=BASE_REQUIREMENTS_FILE):
     with open(filename) as fh:
-        return fh.readlines()
+        reqs = [line.strip() for line in fh.readlines()]
+
+    for req in reqs[:]:
+        if req.startswith('-r '):
+            dep = req.split(maxsplit=2)[1]
+            reqs.extend(parse_requirements(osp.join(osp.dirname(filename), dep.lstrip('/\\'))))
+
+    for req in reqs[:]:
+        if req.startswith('-r '):
+            reqs.remove(req)
+
+    return reqs
 
 
 BASE_REQUIREMENTS = parse_requirements(BASE_REQUIREMENTS_FILE)
@@ -65,6 +76,9 @@ setup(
     ],
     python_requires="{{{generatorLanguageVersion}}}",
     install_requires=BASE_REQUIREMENTS,
+    extras_require={
+        "pytorch": ['torch', 'torchvision'],
+    },
     package_dir={"": "."},
     packages=find_packages(include=["cvat_sdk*"]),
     include_package_data=True,

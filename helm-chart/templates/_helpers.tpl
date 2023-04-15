@@ -27,7 +27,7 @@ If release name contains chart name it will be used as a full name.
 Create chart name and version as used by the chart label.
 */}}
 {{- define "cvat.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- printf "%s" .Chart.Name | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -58,5 +58,16 @@ Create the name of the service account to use
 {{- default (include "cvat.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{- define "cvat.nuclioEnv" }}
+{{- if .Values.nuclio.enabled }}
+- name: CVAT_SERVERLESS
+  value: "1"
+- name: CVAT_NUCLIO_HOST
+  value: "{{ .Release.Name }}-nuclio-dashboard"
+- name: CVAT_NUCLIO_FUNCTION_NAMESPACE
+  value: "{{ .Release.Namespace }}"
 {{- end }}
 {{- end }}

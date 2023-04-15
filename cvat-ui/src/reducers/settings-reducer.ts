@@ -1,4 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -8,10 +9,10 @@ import { BoundariesActionTypes } from 'actions/boundaries-actions';
 import { AuthActionTypes } from 'actions/auth-actions';
 import { SettingsActionTypes } from 'actions/settings-actions';
 import { AnnotationActionTypes } from 'actions/annotation-actions';
-
 import {
-    SettingsState, GridColor, FrameSpeed, ColorBy, DimensionType,
-} from './interfaces';
+    SettingsState, GridColor, FrameSpeed, ColorBy,
+} from 'reducers';
+import { ObjectState, ShapeType, DimensionType } from 'cvat-core-wrapper';
 
 const defaultState: SettingsState = {
     shapes: {
@@ -33,6 +34,7 @@ const defaultState: SettingsState = {
         intelligentPolygonCrop: true,
         defaultApproxPolyAccuracy: 9,
         textFontSize: 14,
+        controlPointsSize: 5,
         textPosition: 'auto',
         textContent: 'id,source,label,attributes,descriptions',
         toolsBlockerState: {
@@ -207,6 +209,15 @@ export default (state = defaultState, action: AnyAction): SettingsState => {
                 },
             };
         }
+        case SettingsActionTypes.SWITCH_CONTROL_POINTS_SIZE: {
+            return {
+                ...state,
+                workspace: {
+                    ...state.workspace,
+                    controlPointsSize: action.payload.controlPointsSize,
+                },
+            };
+        }
         case SettingsActionTypes.SWITCH_TEXT_POSITION: {
             return {
                 ...state,
@@ -373,6 +384,27 @@ export default (state = defaultState, action: AnyAction): SettingsState => {
                 },
             };
         }
+        case AnnotationActionTypes.UPLOAD_JOB_ANNOTATIONS_SUCCESS:
+        case AnnotationActionTypes.CREATE_ANNOTATIONS_SUCCESS:
+        case AnnotationActionTypes.CHANGE_FRAME_SUCCESS: {
+            const { states } = action.payload;
+            if (states.some((_state: ObjectState): boolean => _state.shapeType === ShapeType.MASK)) {
+                const MIN_OPACITY = 30;
+                const { shapes: { opacity } } = state;
+                if (opacity < MIN_OPACITY) {
+                    return {
+                        ...state,
+                        shapes: {
+                            ...state.shapes,
+                            opacity: MIN_OPACITY,
+                            selectedOpacity: MIN_OPACITY * 2,
+                        },
+                    };
+                }
+            }
+
+            return state;
+        }
         case BoundariesActionTypes.RESET_AFTER_ERROR:
         case AnnotationActionTypes.GET_JOB_SUCCESS: {
             const { job } = action.payload;
@@ -381,11 +413,10 @@ export default (state = defaultState, action: AnyAction): SettingsState => {
                 ...state,
                 player: {
                     ...state.player,
-                    resetZoom: job && job.mode === 'annotation',
                 },
                 shapes: {
                     ...defaultState.shapes,
-                    ...(job.dimension === DimensionType.DIM_3D ?
+                    ...(job.dimension === DimensionType.DIMENSION_3D ?
                         {
                             opacity: 40,
                             selectedOpacity: 60,

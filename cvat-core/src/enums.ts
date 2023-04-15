@@ -1,450 +1,255 @@
 // Copyright (C) 2019-2022 Intel Corporation
+// Copyright (C) 2022-2023 CVAT.ai Corporation
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier = MIT
 
-(() => {
-    /**
-     * Share files types
-     * @enum {string}
-     * @name ShareFileType
-     * @memberof module:API.cvat.enums
-     * @property {string} DIR 'DIR'
-     * @property {string} REG 'REG'
-     * @readonly
-     */
-    const ShareFileType = Object.freeze({
-        DIR: 'DIR',
-        REG: 'REG',
-    });
+export enum ShareFileType {
+    DIR = 'DIR',
+    REG = 'REG',
+}
 
-    /**
-     * Task statuses
-     * @enum {string}
-     * @name TaskStatus
-     * @memberof module:API.cvat.enums
-     * @property {string} ANNOTATION 'annotation'
-     * @property {string} VALIDATION 'validation'
-     * @property {string} COMPLETED 'completed'
-     * @readonly
-     */
-    const TaskStatus = Object.freeze({
-        ANNOTATION: 'annotation',
-        VALIDATION: 'validation',
-        COMPLETED: 'completed',
-    });
+export enum ChunkType {
+    IMAGESET = 'imageset',
+    VIDEO = 'video',
+}
 
-    /**
-     * Job stages
-     * @enum {string}
-     * @name JobStage
-     * @memberof module:API.cvat.enums
-     * @property {string} ANNOTATION 'annotation'
-     * @property {string} VALIDATION 'validation'
-     * @property {string} ACCEPTANCE 'acceptance'
-     * @readonly
-     */
-    const JobStage = Object.freeze({
-        ANNOTATION: 'annotation',
-        VALIDATION: 'validation',
-        ACCEPTANCE: 'acceptance',
-    });
+export enum TaskStatus {
+    ANNOTATION = 'annotation',
+    VALIDATION = 'validation',
+    COMPLETED = 'completed',
+}
 
-    /**
-     * Job states
-     * @enum {string}
-     * @name JobState
-     * @memberof module:API.cvat.enums
-     * @property {string} NEW 'new'
-     * @property {string} IN_PROGRESS 'in progress'
-     * @property {string} COMPLETED 'completed'
-     * @property {string} REJECTED 'rejected'
-     * @readonly
-     */
-    const JobState = Object.freeze({
-        NEW: 'new',
-        IN_PROGRESS: 'in progress',
-        COMPLETED: 'completed',
-        REJECTED: 'rejected',
-    });
+export type ProjectStatus = TaskStatus;
 
-    /**
-     * Task dimension
-     * @enum
-     * @name DimensionType
-     * @memberof module:API.cvat.enums
-     * @property {string} DIMENSION_2D '2d'
-     * @property {string} DIMENSION_3D '3d'
-     * @readonly
-     */
-    const DimensionType = Object.freeze({
-        DIMENSION_2D: '2d',
-        DIMENSION_3D: '3d',
-    });
+export enum JobStage {
+    ANNOTATION = 'annotation',
+    VALIDATION = 'validation',
+    ACCEPTANCE = 'acceptance',
+}
 
-    /**
-     * List of RQ statuses
-     * @enum {string}
-     * @name RQStatus
-     * @memberof module:API.cvat.enums
-     * @property {string} QUEUED 'queued'
-     * @property {string} STARTED 'started'
-     * @property {string} FINISHED 'finished'
-     * @property {string} FAILED 'failed'
-     * @property {string} UNKNOWN 'unknown'
-     * @readonly
-     */
-    const RQStatus = Object.freeze({
-        QUEUED: 'queued',
-        STARTED: 'started',
-        FINISHED: 'finished',
-        FAILED: 'failed',
-        UNKNOWN: 'unknown',
-    });
+export enum JobState {
+    NEW = 'new',
+    IN_PROGRESS = 'in progress',
+    COMPLETED = 'completed',
+    REJECTED = 'rejected',
+}
 
-    /**
-     * Task modes
-     * @enum {string}
-     * @name TaskMode
-     * @memberof module:API.cvat.enums
-     * @property {string} ANNOTATION 'annotation'
-     * @property {string} INTERPOLATION 'interpolation'
-     * @readonly
-     */
-    const TaskMode = Object.freeze({
-        ANNOTATION: 'annotation',
-        INTERPOLATION: 'interpolation',
-    });
+export enum DimensionType {
+    DIMENSION_2D = '2d',
+    DIMENSION_3D = '3d',
+}
 
-    /**
-     * Attribute types
-     * @enum {string}
-     * @name AttributeType
-     * @memberof module:API.cvat.enums
-     * @property {string} CHECKBOX 'checkbox'
-     * @property {string} SELECT 'select'
-     * @property {string} RADIO 'radio'
-     * @property {string} NUMBER 'number'
-     * @property {string} TEXT 'text'
-     * @readonly
-     */
-    const AttributeType = Object.freeze({
-        CHECKBOX: 'checkbox',
-        RADIO: 'radio',
-        SELECT: 'select',
-        NUMBER: 'number',
-        TEXT: 'text',
-    });
+export enum RQStatus {
+    QUEUED = 'queued',
+    STARTED = 'started',
+    FINISHED = 'finished',
+    FAILED = 'failed',
+    UNKNOWN = 'unknown',
+}
 
-    /**
-     * Object types
-     * @enum {string}
-     * @name ObjectType
-     * @memberof module:API.cvat.enums
-     * @property {string} TAG 'tag'
-     * @property {string} SHAPE 'shape'
-     * @property {string} TRACK 'track'
-     * @readonly
-     */
-    const ObjectType = Object.freeze({
-        TAG: 'tag',
-        SHAPE: 'shape',
-        TRACK: 'track',
-    });
+export enum TaskMode {
+    ANNOTATION = 'annotation',
+    INTERPOLATION = 'interpolation',
+}
 
-    /**
-     * Object shapes
-     * @enum {string}
-     * @name ObjectShape
-     * @memberof module:API.cvat.enums
-     * @property {string} RECTANGLE 'rectangle'
-     * @property {string} POLYGON 'polygon'
-     * @property {string} POLYLINE 'polyline'
-     * @property {string} POINTS 'points'
-     * @property {string} CUBOID 'cuboid'
-     * @readonly
-     */
-    const ObjectShape = Object.freeze({
-        RECTANGLE: 'rectangle',
-        POLYGON: 'polygon',
-        POLYLINE: 'polyline',
-        POINTS: 'points',
-        ELLIPSE: 'ellipse',
-        CUBOID: 'cuboid',
-    });
+export enum AttributeType {
+    CHECKBOX = 'checkbox',
+    RADIO = 'radio',
+    SELECT = 'select',
+    NUMBER = 'number',
+    TEXT = 'text',
+}
 
-    /**
-     * Annotation type
-     * @enum {string}
-     * @name Source
-     * @memberof module:API.cvat.enums
-     * @property {string} MANUAL 'manual'
-     * @property {string} AUTO 'auto'
-     * @readonly
-     */
-    const Source = Object.freeze({
-        MANUAL: 'manual',
-        AUTO: 'auto',
-    });
+export enum ObjectType {
+    TAG = 'tag',
+    SHAPE = 'shape',
+    TRACK = 'track',
+}
 
-    /**
-        * Logger event types
-        * @enum {string}
-        * @name LogType
-        * @memberof module:API.cvat.enums
-        * @property {string} loadJob Load job
-        * @property {string} saveJob Save job
-        * @property {string} restoreJob Restore job
-        * @property {string} uploadAnnotations Upload annotations
-        * @property {string} sendUserActivity Send user activity
-        * @property {string} sendException Send exception
-        * @property {string} sendTaskInfo Send task info
+export enum ShapeType {
+    RECTANGLE = 'rectangle',
+    POLYGON = 'polygon',
+    POLYLINE = 'polyline',
+    POINTS = 'points',
+    ELLIPSE = 'ellipse',
+    CUBOID = 'cuboid',
+    SKELETON = 'skeleton',
+    MASK = 'mask',
+}
 
-        * @property {string} drawObject Draw object
-        * @property {string} pasteObject Paste object
-        * @property {string} copyObject Copy object
-        * @property {string} propagateObject Propagate object
-        * @property {string} dragObject Drag object
-        * @property {string} resizeObject Resize object
-        * @property {string} deleteObject Delete object
-        * @property {string} lockObject Lock object
-        * @property {string} mergeObjects Merge objects
-        * @property {string} changeAttribute Change attribute
-        * @property {string} changeLabel Change label
+export enum Source {
+    MANUAL = 'manual',
+    AUTO = 'auto',
+}
 
-        * @property {string} changeFrame Change frame
-        * @property {string} moveImage Move image
-        * @property {string} zoomImage Zoom image
-        * @property {string} fitImage Fit image
-        * @property {string} rotateImage Rotate image
+export enum LogType {
+    loadTool = 'load:cvat',
 
-        * @property {string} undoAction Undo action
-        * @property {string} redoAction Redo action
+    loadJob = 'load:job',
+    saveJob = 'save:job',
+    restoreJob = 'restore:job',
+    uploadAnnotations = 'upload:annotations',
+    exception = 'send:exception',
+    sendTaskInfo = 'send:task_info',
 
-        * @property {string} pressShortcut Press shortcut
-        * @property {string} debugInfo Debug info
-        * @readonly
-    */
-    const LogType = Object.freeze({
-        loadJob: 'Load job',
-        saveJob: 'Save job',
-        restoreJob: 'Restore job',
-        uploadAnnotations: 'Upload annotations',
-        sendUserActivity: 'Send user activity',
-        sendException: 'Send exception',
-        sendTaskInfo: 'Send task info',
+    drawObject = 'draw:object',
+    pasteObject = 'paste:object',
+    copyObject = 'copy:object',
+    propagateObject = 'propagate:object',
+    dragObject = 'drag:object',
+    resizeObject = 'resize:object',
+    deleteObject = 'delete:object',
+    lockObject = 'lock:object',
+    mergeObjects = 'merge:objects',
+    changeAttribute = 'change:attribute',
+    changeLabel = 'change:label',
 
-        drawObject: 'Draw object',
-        pasteObject: 'Paste object',
-        copyObject: 'Copy object',
-        propagateObject: 'Propagate object',
-        dragObject: 'Drag object',
-        resizeObject: 'Resize object',
-        deleteObject: 'Delete object',
-        lockObject: 'Lock object',
-        mergeObjects: 'Merge objects',
-        changeAttribute: 'Change attribute',
-        changeLabel: 'Change label',
+    changeFrame = 'change:frame',
+    moveImage = 'move:image',
+    zoomImage = 'zoom:image',
+    fitImage = 'fit:image',
+    rotateImage = 'rotate:image',
 
-        changeFrame: 'Change frame',
-        moveImage: 'Move image',
-        zoomImage: 'Zoom image',
-        fitImage: 'Fit image',
-        rotateImage: 'Rotate image',
+    undoAction = 'action:undo',
+    redoAction = 'action:redo',
 
-        undoAction: 'Undo action',
-        redoAction: 'Redo action',
+    pressShortcut = 'press:shortcut',
+    debugInfo = 'send:debug_info',
 
-        pressShortcut: 'Press shortcut',
-        debugInfo: 'Debug info',
-    });
+    clickElement = 'click:element',
+}
 
-    /**
-     * Types of actions with annotations
-     * @enum {string}
-     * @name HistoryActions
-     * @memberof module:API.cvat.enums
-     * @property {string} CHANGED_LABEL Changed label
-     * @property {string} CHANGED_ATTRIBUTES Changed attributes
-     * @property {string} CHANGED_POINTS Changed points
-     * @property {string} CHANGED_OUTSIDE Changed outside
-     * @property {string} CHANGED_OCCLUDED Changed occluded
-     * @property {string} CHANGED_ZORDER Changed z-order
-     * @property {string} CHANGED_LOCK Changed lock
-     * @property {string} CHANGED_COLOR Changed color
-     * @property {string} CHANGED_HIDDEN Changed hidden
-     * @property {string} CHANGED_SOURCE Changed source
-     * @property {string} MERGED_OBJECTS Merged objects
-     * @property {string} SPLITTED_TRACK Splitted track
-     * @property {string} GROUPED_OBJECTS Grouped objects
-     * @property {string} CREATED_OBJECTS Created objects
-     * @property {string} REMOVED_OBJECT Removed object
-     * @property {string} REMOVED_FRAME Removed frame
-     * @property {string} RESTORED_FRAME Restored frame
-     * @readonly
-     */
-    const HistoryActions = Object.freeze({
-        CHANGED_LABEL: 'Changed label',
-        CHANGED_ATTRIBUTES: 'Changed attributes',
-        CHANGED_POINTS: 'Changed points',
-        CHANGED_OUTSIDE: 'Changed outside',
-        CHANGED_OCCLUDED: 'Changed occluded',
-        CHANGED_ZORDER: 'Changed z-order',
-        CHANGED_KEYFRAME: 'Changed keyframe',
-        CHANGED_LOCK: 'Changed lock',
-        CHANGED_PINNED: 'Changed pinned',
-        CHANGED_COLOR: 'Changed color',
-        CHANGED_HIDDEN: 'Changed hidden',
-        CHANGED_SOURCE: 'Changed source',
-        MERGED_OBJECTS: 'Merged objects',
-        SPLITTED_TRACK: 'Splitted track',
-        GROUPED_OBJECTS: 'Grouped objects',
-        CREATED_OBJECTS: 'Created objects',
-        REMOVED_OBJECT: 'Removed object',
-        REMOVED_FRAME: 'Removed frame',
-        RESTORED_FRAME: 'Restored frame',
-    });
+export enum HistoryActions {
+    CHANGED_LABEL = 'Changed label',
+    CHANGED_ATTRIBUTES = 'Changed attributes',
+    CHANGED_POINTS = 'Changed points',
+    CHANGED_ROTATION = 'Object rotated',
+    CHANGED_OUTSIDE = 'Changed outside',
+    CHANGED_OCCLUDED = 'Changed occluded',
+    CHANGED_ZORDER = 'Changed z-order',
+    CHANGED_KEYFRAME = 'Changed keyframe',
+    CHANGED_LOCK = 'Changed lock',
+    CHANGED_PINNED = 'Changed pinned',
+    CHANGED_COLOR = 'Changed color',
+    CHANGED_HIDDEN = 'Changed hidden',
+    CHANGED_SOURCE = 'Changed source',
+    MERGED_OBJECTS = 'Merged objects',
+    SPLITTED_TRACK = 'Splitted track',
+    GROUPED_OBJECTS = 'Grouped objects',
+    CREATED_OBJECTS = 'Created objects',
+    REMOVED_OBJECT = 'Removed object',
+    REMOVED_FRAME = 'Removed frame',
+    RESTORED_FRAME = 'Restored frame',
+}
 
-    /**
-     * Enum string values.
-     * @name ModelType
-     * @memberof module:API.cvat.enums
-     * @enum {string}
-     */
-    const ModelType = {
-        DETECTOR: 'detector',
-        INTERACTOR: 'interactor',
-        TRACKER: 'tracker',
-    };
+export enum ModelKind {
+    DETECTOR = 'detector',
+    INTERACTOR = 'interactor',
+    TRACKER = 'tracker',
+    CLASSIFIER = 'classifier',
+    REID = 'reid',
+}
 
-    /**
-     * Array of hex colors
-     * @name colors
-     * @memberof module:API.cvat.enums
-     * @type {string[]}
-     * @readonly
-     */
-    const colors = [
-        '#33ddff',
-        '#fa3253',
-        '#34d1b7',
-        '#ff007c',
-        '#ff6037',
-        '#ddff33',
-        '#24b353',
-        '#b83df5',
-        '#66ff66',
-        '#32b7fa',
-        '#ffcc33',
-        '#83e070',
-        '#fafa37',
-        '#5986b3',
-        '#8c78f0',
-        '#ff6a4d',
-        '#f078f0',
-        '#2a7dd1',
-        '#b25050',
-        '#cc3366',
-        '#cc9933',
-        '#aaf0d1',
-        '#ff00cc',
-        '#3df53d',
-        '#fa32b7',
-        '#fa7dbb',
-        '#ff355e',
-        '#f59331',
-        '#3d3df5',
-        '#733380',
-    ];
+export enum ModelProviders {
+    CVAT = 'cvat',
+}
 
-    /**
-     * Types of cloud storage providers
-     * @enum {string}
-     * @name CloudStorageProviderType
-     * @memberof module:API.cvat.enums
-     * @property {string} AWS_S3 'AWS_S3_BUCKET'
-     * @property {string} AZURE 'AZURE_CONTAINER'
-     * @property {string} GOOGLE_CLOUD_STORAGE 'GOOGLE_CLOUD_STORAGE'
-     * @readonly
-     */
-    const CloudStorageProviderType = Object.freeze({
-        AWS_S3_BUCKET: 'AWS_S3_BUCKET',
-        AZURE_CONTAINER: 'AZURE_CONTAINER',
-        GOOGLE_CLOUD_STORAGE: 'GOOGLE_CLOUD_STORAGE',
-    });
+export enum ModelReturnType {
+    RECTANGLE = 'rectangle',
+    TAG = 'tag',
+    POLYGON = 'polygon',
+    MASK = 'mask',
+}
 
-    /**
-     * Types of cloud storage credentials
-     * @enum {string}
-     * @name CloudStorageCredentialsType
-     * @memberof module:API.cvat.enums
-     * @property {string} KEY_SECRET_KEY_PAIR 'KEY_SECRET_KEY_PAIR'
-     * @property {string} ACCOUNT_NAME_TOKEN_PAIR 'ACCOUNT_NAME_TOKEN_PAIR'
-     * @property {string} ANONYMOUS_ACCESS 'ANONYMOUS_ACCESS'
-     * @property {string} KEY_FILE_PATH 'KEY_FILE_PATH'
-     * @readonly
-     */
-    const CloudStorageCredentialsType = Object.freeze({
-        KEY_SECRET_KEY_PAIR: 'KEY_SECRET_KEY_PAIR',
-        ACCOUNT_NAME_TOKEN_PAIR: 'ACCOUNT_NAME_TOKEN_PAIR',
-        ANONYMOUS_ACCESS: 'ANONYMOUS_ACCESS',
-        KEY_FILE_PATH: 'KEY_FILE_PATH',
-    });
+export const colors = [
+    '#33ddff',
+    '#fa3253',
+    '#34d1b7',
+    '#ff007c',
+    '#ff6037',
+    '#ddff33',
+    '#24b353',
+    '#b83df5',
+    '#66ff66',
+    '#32b7fa',
+    '#ffcc33',
+    '#83e070',
+    '#fafa37',
+    '#5986b3',
+    '#8c78f0',
+    '#ff6a4d',
+    '#f078f0',
+    '#2a7dd1',
+    '#b25050',
+    '#cc3366',
+    '#cc9933',
+    '#aaf0d1',
+    '#ff00cc',
+    '#3df53d',
+    '#fa32b7',
+    '#fa7dbb',
+    '#ff355e',
+    '#f59331',
+    '#3d3df5',
+    '#733380',
+];
 
-    /**
-     * Task statuses
-     * @enum {string}
-     * @name MembershipRole
-     * @memberof module:API.cvat.enums
-     * @property {string} WORKER 'worker'
-     * @property {string} SUPERVISOR 'supervisor'
-     * @property {string} MAINTAINER 'maintainer'
-     * @property {string} OWNER 'owner'
-     * @readonly
-     */
-    const MembershipRole = Object.freeze({
-        WORKER: 'worker',
-        SUPERVISOR: 'supervisor',
-        MAINTAINER: 'maintainer',
-        OWNER: 'owner',
-    });
+export enum CloudStorageProviderType {
+    AWS_S3_BUCKET = 'AWS_S3_BUCKET',
+    AZURE_CONTAINER = 'AZURE_CONTAINER',
+    GOOGLE_CLOUD_STORAGE = 'GOOGLE_CLOUD_STORAGE',
+}
 
-    /**
-     * Sorting methods
-     * @enum {string}
-     * @name SortingMethod
-     * @memberof module:API.cvat.enums
-     * @property {string} LEXICOGRAPHICAL 'lexicographical'
-     * @property {string} NATURAL 'natural'
-     * @property {string} PREDEFINED 'predefined'
-     * @property {string} RANDOM 'random'
-     * @readonly
-     */
-    const SortingMethod = Object.freeze({
-        LEXICOGRAPHICAL: 'lexicographical',
-        NATURAL: 'natural',
-        PREDEFINED: 'predefined',
-        RANDOM: 'random',
-    });
+export enum CloudStorageCredentialsType {
+    KEY_SECRET_KEY_PAIR = 'KEY_SECRET_KEY_PAIR',
+    ACCOUNT_NAME_TOKEN_PAIR = 'ACCOUNT_NAME_TOKEN_PAIR',
+    ANONYMOUS_ACCESS = 'ANONYMOUS_ACCESS',
+    KEY_FILE_PATH = 'KEY_FILE_PATH',
+}
 
-    module.exports = {
-        ShareFileType,
-        TaskStatus,
-        JobStage,
-        JobState,
-        TaskMode,
-        AttributeType,
-        ObjectType,
-        ObjectShape,
-        LogType,
-        ModelType,
-        HistoryActions,
-        RQStatus,
-        colors,
-        Source,
-        DimensionType,
-        CloudStorageProviderType,
-        CloudStorageCredentialsType,
-        MembershipRole,
-        SortingMethod,
-    };
-})();
+export enum CloudStorageStatus {
+    AVAILABLE = 'AVAILABLE',
+    NOT_FOUND = 'NOT_FOUND',
+    FORBIDDEN = 'FORBIDDEN',
+}
+
+export enum MembershipRole {
+    WORKER = 'worker',
+    SUPERVISOR = 'supervisor',
+    MAINTAINER = 'maintainer',
+    OWNER = 'owner',
+}
+
+export enum SortingMethod {
+    LEXICOGRAPHICAL = 'lexicographical',
+    NATURAL = 'natural',
+    PREDEFINED = 'predefined',
+    RANDOM = 'random',
+}
+
+export enum StorageLocation {
+    LOCAL = 'local',
+    CLOUD_STORAGE = 'cloud_storage',
+}
+
+export enum WebhookSourceType {
+    ORGANIZATION = 'organization',
+    PROJECT = 'project',
+}
+
+export enum WebhookContentType {
+    JSON = 'application/json',
+}
+
+export enum LabelType {
+    ANY = 'any',
+    RECTANGLE = 'rectangle',
+    POLYGON = 'polygon',
+    POLYLINE = 'polyline',
+    POINTS = 'points',
+    ELLIPSE = 'ellipse',
+    CUBOID = 'cuboid',
+    SKELETON = 'skeleton',
+    MASK = 'mask',
+    TAG = 'tag',
+}

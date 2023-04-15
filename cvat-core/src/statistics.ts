@@ -1,108 +1,44 @@
 // Copyright (C) 2019-2022 Intel Corporation
+// Copyright (C) 2022 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-(() => {
-    /**
-     * Class representing collection statistics
-     * @memberof module:API.cvat.classes
-     * @hideconstructor
-     */
-    class Statistics {
-        constructor(label, total) {
-            Object.defineProperties(
-                this,
-                Object.freeze({
-                    /**
-                    * Statistics by labels with a structure:
-                    * @example
-                    * {
-                    *     label: {
-                    *         boxes: {
-                    *             tracks: 10,
-                    *             shapes: 11,
-                    *         },
-                    *         polygons: {
-                    *             tracks: 13,
-                    *             shapes: 14,
-                    *         },
-                    *         polylines: {
-                    *             tracks: 16,
-                    *             shapes: 17,
-                    *         },
-                    *         points: {
-                    *             tracks: 19,
-                    *             shapes: 20,
-                    *         },
-                    *         ellipse: {
-                    *             tracks: 13,
-                    *             shapes: 15,
-                    *         },
-                    *         cuboids: {
-                    *             tracks: 21,
-                    *             shapes: 22,
-                    *         },
-                    *         tags: 66,
-                    *         manually: 186,
-                    *         interpolated: 500,
-                    *         total: 608,
-                    *     }
-                    * }
-                    * @name label
-                    * @type {Object}
-                    * @memberof module:API.cvat.classes.Statistics
-                    * @readonly
-                    * @instance
-                    */
-                    label: {
-                        get: () => JSON.parse(JSON.stringify(label)),
-                    },
-                    /**
-                    * Total statistics (covers all labels) with a structure:
-                    * @example
-                    * {
-                    *     boxes: {
-                    *             tracks: 10,
-                    *             shapes: 11,
-                    *     },
-                    *     polygons: {
-                    *         tracks: 13,
-                    *         shapes: 14,
-                    *     },
-                    *     polylines: {
-                    *        tracks: 16,
-                    *        shapes: 17,
-                    *    },
-                    *    points: {
-                    *        tracks: 19,
-                    *        shapes: 20,
-                    *    },
-                    *    ellipse: {
-                    *        tracks: 13,
-                    *        shapes: 15,
-                    *    },
-                    *    cuboids: {
-                    *        tracks: 21,
-                    *        shapes: 22,
-                    *    },
-                    *    tags: 66,
-                    *    manually: 186,
-                    *    interpolated: 500,
-                    *    total: 608,
-                    * }
-                    * @name total
-                    * @type {Object}
-                    * @memberof module:API.cvat.classes.Statistics
-                    * @readonly
-                    * @instance
-                    */
-                    total: {
-                        get: () => JSON.parse(JSON.stringify(total)),
-                    },
-                }),
-            );
-        }
+interface ObjectStatistics {
+    track: number;
+    shape: number;
+}
+
+interface StatisticsBody {
+    rectangle: ObjectStatistics;
+    polygon: ObjectStatistics;
+    polyline: ObjectStatistics;
+    points: ObjectStatistics;
+    ellipse: ObjectStatistics;
+    cuboid: ObjectStatistics;
+    skeleton: ObjectStatistics;
+    mask: {
+        shape: number;
+    };
+    tag: number;
+    manually: number;
+    interpolated: number;
+    total: number;
+}
+
+export default class Statistics {
+    private labelData: Record<string, StatisticsBody>;
+    private totalData: StatisticsBody;
+
+    constructor(label: Statistics['labelData'], total: Statistics['totalData']) {
+        this.labelData = label;
+        this.totalData = total;
     }
 
-    module.exports = Statistics;
-})();
+    public get label(): Record<string, StatisticsBody> {
+        return JSON.parse(JSON.stringify(this.labelData));
+    }
+
+    public get total(): StatisticsBody {
+        return JSON.parse(JSON.stringify(this.totalData));
+    }
+}

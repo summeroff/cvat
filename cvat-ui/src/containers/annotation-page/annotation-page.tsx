@@ -12,7 +12,7 @@ import {
     closeJob as closeJobAction,
 } from 'actions/annotation-actions';
 
-import { CombinedState, Workspace } from 'reducers/interfaces';
+import { CombinedState, Workspace } from 'reducers';
 
 type OwnProps = RouteComponentProps<{
     tid: string;
@@ -49,7 +49,7 @@ function mapStateToProps(state: CombinedState, own: OwnProps): StateToProps {
     } = state;
 
     return {
-        job: jobID === requestedId ? job : null,
+        job: jobID === requestedId || (Number.isNaN(jobID) && Number.isNaN(requestedId)) ? job : null,
         fetching,
         workspace,
         frameNumber,

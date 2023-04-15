@@ -1,93 +1,129 @@
 // Copyright (C) 2021-2022 Intel Corporation
+// Copyright (C) 2022-2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-(() => {
-    const serverProxy = require('./server-proxy');
-    const { getPreview } = require('./frames');
+import { Storage } from './storage';
+import serverProxy from './server-proxy';
+import { decodePreview } from './frames';
+import Project from './project';
+import { exportDataset, importDataset } from './annotations';
+import { SerializedLabel } from './server-response-types';
+import { Label } from './labels';
 
-    const { Project } = require('./project');
-    const { exportDataset, importDataset } = require('./annotations');
+export default function implementProject(projectClass) {
+    projectClass.prototype.save.implementation = async function () {
+        if (typeof this.id !== 'undefined') {
+            const projectData = this._updateTrigger.getUpdated(this, {
+                bugTracker: 'bug_tracker',
+                assignee: 'assignee_id',
+            });
 
-    function implementProject(projectClass) {
-        projectClass.prototype.save.implementation = async function () {
-            if (typeof this.id !== 'undefined') {
-                const projectData = this._updateTrigger.getUpdated(this, {
-                    bugTracker: 'bug_tracker',
-                    trainingProject: 'training_project',
-                    assignee: 'assignee_id',
-                });
-                if (projectData.assignee_id) {
-                    projectData.assignee_id = projectData.assignee_id.id;
+            if (projectData.assignee_id) {
+                projectData.assignee_id = projectData.assignee_id.id;
+            }
+
+            await Promise.all((projectData.labels || []).map((label: Label): Promise<unknown> => {
+                if (label.deleted) {
+                    return serverProxy.labels.delete(label.id);
                 }
-                if (projectData.labels) {
-                    projectData.labels = projectData.labels.map((el) => el.toJSON());
+
+                if (label.patched) {
+                    return serverProxy.labels.update(label.id, label.toJSON());
                 }
 
-                await serverProxy.projects.save(this.id, projectData);
-                this._updateTrigger.reset();
-                return this;
+                return Promise.resolve();
+            }));
+
+            // leave only new labels to create them via project PATCH request
+            projectData.labels = (projectData.labels || [])
+                .filter((label: SerializedLabel) => !Number.isInteger(label.id)).map((el) => el.toJSON());
+            if (!projectData.labels.length) {
+                delete projectData.labels;
             }
 
-            // initial creating
-            const projectSpec = {
-                name: this.name,
-                labels: this.labels.map((el) => el.toJSON()),
-            };
-
-            if (this.bugTracker) {
-                projectSpec.bug_tracker = this.bugTracker;
+            this._updateTrigger.reset();
+            let serializedProject = null;
+            if (Object.keys(projectData).length) {
+                serializedProject = await serverProxy.projects.save(this.id, projectData);
+            } else {
+                [serializedProject] = (await serverProxy.projects.get({ id: this.id }));
             }
 
-            if (this.trainingProject) {
-                projectSpec.training_project = this.trainingProject;
-            }
+            const labels = await serverProxy.labels.get({ project_id: serializedProject.id });
+            return new Project({ ...serializedProject, labels: labels.results });
+        }
 
-            const project = await serverProxy.projects.create(projectSpec);
-            return new Project(project);
+        // initial creating
+        const projectSpec: any = {
+            name: this.name,
+            labels: this.labels.map((el) => el.toJSON()),
         };
 
-        projectClass.prototype.delete.implementation = async function () {
-            const result = await serverProxy.projects.delete(this.id);
-            return result;
-        };
+        if (this.bugTracker) {
+            projectSpec.bug_tracker = this.bugTracker;
+        }
 
-        projectClass.prototype.preview.implementation = async function () {
-            if (!this._internalData.task_ids.length) {
-                return '';
-            }
-            const frameData = await getPreview(this._internalData.task_ids[0]);
-            return frameData;
-        };
+        if (this.targetStorage) {
+            projectSpec.target_storage = this.targetStorage.toJSON();
+        }
 
-        projectClass.prototype.annotations.exportDataset.implementation = async function (
-            format,
-            saveImages,
-            customName,
-        ) {
-            const result = exportDataset(this, format, customName, saveImages);
-            return result;
-        };
-        projectClass.prototype.annotations.importDataset.implementation = async function (
-            format,
-            file,
-            updateStatusCallback,
-        ) {
-            return importDataset(this, format, file, updateStatusCallback);
-        };
+        if (this.sourceStorage) {
+            projectSpec.source_storage = this.sourceStorage.toJSON();
+        }
 
-        projectClass.prototype.backup.implementation = async function () {
-            const result = await serverProxy.projects.backupProject(this.id);
-            return result;
-        };
+        const project = await serverProxy.projects.create(projectSpec);
+        const labels = await serverProxy.labels.get({ project_id: project.id });
+        return new Project({ ...project, labels: labels.results });
+    };
 
-        projectClass.restore.implementation = async function (file) {
-            const result = await serverProxy.projects.restoreProject(file);
-            return result.id;
-        };
+    projectClass.prototype.delete.implementation = async function () {
+        const result = await serverProxy.projects.delete(this.id);
+        return result;
+    };
 
-        return projectClass;
-    }
+    projectClass.prototype.preview.implementation = async function () {
+        const preview = await serverProxy.projects.getPreview(this.id);
+        const decoded = await decodePreview(preview);
+        return decoded;
+    };
 
-    module.exports = implementProject;
-})();
+    projectClass.prototype.annotations.exportDataset.implementation = async function (
+        format: string,
+        saveImages: boolean,
+        useDefaultSettings: boolean,
+        targetStorage: Storage,
+        customName?: string,
+    ) {
+        const result = exportDataset(this, format, saveImages, useDefaultSettings, targetStorage, customName);
+        return result;
+    };
+    projectClass.prototype.annotations.importDataset.implementation = async function (
+        format: string,
+        useDefaultSettings: boolean,
+        sourceStorage: Storage,
+        file: File | string,
+        options?: {
+            convMaskToPoly?: boolean,
+            updateStatusCallback?: (s: string, n: number) => void,
+        },
+    ) {
+        return importDataset(this, format, useDefaultSettings, sourceStorage, file, options);
+    };
+
+    projectClass.prototype.backup.implementation = async function (
+        targetStorage: Storage,
+        useDefaultSettings: boolean,
+        fileName?: string,
+    ) {
+        const result = await serverProxy.projects.backup(this.id, targetStorage, useDefaultSettings, fileName);
+        return result;
+    };
+
+    projectClass.restore.implementation = async function (storage: Storage, file: File | string) {
+        const result = await serverProxy.projects.restore(storage, file);
+        return result;
+    };
+
+    return projectClass;
+}

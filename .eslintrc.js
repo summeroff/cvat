@@ -16,18 +16,19 @@ module.exports = {
     ignorePatterns: [
         '.eslintrc.js',
         'lint-staged.config.js',
+        'site/themes/**',
     ],
-    plugins: ['@typescript-eslint', 'security', 'no-unsanitized', 'eslint-plugin-header', 'import'],
+    plugins: ['@typescript-eslint', 'security', 'no-unsanitized', 'import'],
     extends: [
         'eslint:recommended', 'plugin:security/recommended', 'plugin:no-unsanitized/DOM',
         'airbnb-base', 'plugin:import/errors', 'plugin:import/warnings',
         'plugin:import/typescript', 'plugin:@typescript-eslint/recommended', 'airbnb-typescript/base',
     ],
     rules: {
-        'header/header': [2, 'line', [{
-            pattern: ' {1}Copyright \\(C\\) (?:20\\d{2}-)?2022 Intel Corporation',
-            template: ' Copyright (C) 2022 Intel Corporation'
-        }, '', ' SPDX-License-Identifier: MIT']],
+        // 'header/header': [2, 'line', [{
+        //     pattern: ' {1}Copyright \\(C\\) (?:20\\d{2}-)?2022 Intel Corporation',
+        //     template: ' Copyright (C) 2022 Intel Corporation'
+        // }, '', ' SPDX-License-Identifier: MIT']],
         'no-plusplus': 0,
         'no-continue': 0,
         'no-console': 0,
@@ -39,7 +40,7 @@ module.exports = {
         'func-names': 0,
         'valid-typeof': 0,
         'no-useless-constructor': 0, // sometimes constructor is necessary to generate right documentation in cvat-core
-        'quotes': ['error', 'single'],
+        'quotes': ['error', 'single', { "avoidEscape": true }],
         'lines-between-class-members': 0,
         'class-methods-use-this': 0,
         'no-underscore-dangle': ['error', { allowAfterThis: true }],
@@ -52,6 +53,7 @@ module.exports = {
         'import/order': ['error', {'groups': ['builtin', 'external', 'internal']}],
         'import/prefer-default-export': 0, // works incorrect with interfaces
 
+        '@typescript-eslint/ban-ts-comment': 0,
         '@typescript-eslint/no-explicit-any': 0,
         '@typescript-eslint/indent': ['error', 4],
         '@typescript-eslint/lines-between-class-members': 0,
