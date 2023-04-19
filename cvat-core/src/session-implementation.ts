@@ -81,6 +81,11 @@ export function implementJob(Job) {
         return result.map((issue) => new Issue(issue));
     };
 
+    Job.prototype.objects.implementation = async function () {
+        const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
+        return rawAnnotations.shapes.length;
+    };
+
     Job.prototype.openIssue.implementation = async function (issue, message) {
         checkObjectType('issue', issue, null, Issue);
         checkObjectType('message', message, 'string');

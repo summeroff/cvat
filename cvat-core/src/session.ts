@@ -559,6 +559,11 @@ export class Job extends Session {
         return result;
     }
 
+    async objects() {
+        const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.objects);
+        return result;
+    }
+
     async openIssue(issue, message) {
         const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.openIssue, issue, message);
         return result;

@@ -82,6 +82,47 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
+function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
+    const [summary, setSummary] = useState<Record<string, any> | null>(null);
+    const [error, setError] = useState<any>(null);
+    useEffect(() => {
+        setError(null);
+        jobInstance
+            .objects(jobInstance.id)
+            .then((objects: any) => {
+                setSummary({
+                    objects: objects,
+                });
+            })
+            .catch((_error: any) => {
+                // eslint-disable-next-line
+                console.log(_error);
+                setError(_error);
+            });
+    }, []);
+
+    if (!summary) {
+        if (error) {
+            if (error.toString().includes('403')) {
+                return <p>You do not have permissions</p>;
+            }
+
+            return <p>Could not fetch, check console output</p>;
+        }
+
+        return (
+            <>
+                <p>Loading.. </p>
+                <LoadingOutlined />
+            </>
+        );
+    }
+
+    return (
+            <Text strong>{summary.objects}</Text>
+    );
+}
+
 function JobListComponent(props: Props): JSX.Element {
     const {
         task: taskInstance,
@@ -252,17 +293,16 @@ function JobListComponent(props: Props): JSX.Element {
             title: 'Objects',
             dataIndex: 'objects',
             key: 'objects',
-            className: 'cvat-text-color',
+            className: 'cvat-job-item-objects',
             render: (jobInstance: any): JSX.Element => {
-                const { status } = jobInstance;
-
+                const { objects } = jobInstance;
                 return (
                     <Text>
                         {<LabelingSummaryComponent jobInstance={jobInstance} />}
                     </Text>
                 );
             },
-        },
+         },
     ];
 
     let completed = 0;
