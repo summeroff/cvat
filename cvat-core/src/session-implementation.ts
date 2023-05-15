@@ -83,7 +83,11 @@ export function implementJob(Job) {
 
     Job.prototype.objects.implementation = async function () {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
-        return rawAnnotations.shapes.length;
+        return {
+            tags: rawAnnotations.tags.length,
+            shapes: rawAnnotations.shapes.length,
+            tracks: rawAnnotations.tracks.length,
+        };
     };
 
     Job.prototype.openIssue.implementation = async function (issue, message) {

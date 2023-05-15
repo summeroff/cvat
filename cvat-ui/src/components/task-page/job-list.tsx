@@ -82,7 +82,7 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
-function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
+function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jobInstance: any, jobDataArray: JobData[], addObject: (newData: JobData) => void }): JSX.Element {
     const [summary, setSummary] = useState<Record<string, any> | null>(null);
     const [error, setError] = useState<any>(null);
     useEffect(() => {
@@ -90,9 +90,16 @@ function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.El
         jobInstance
             .objects(jobInstance.id)
             .then((objects: any) => {
+
                 setSummary({
                     objects: objects,
                 });
+                const newData: JobData = {
+                    jobId: jobInstance.id,
+                    shapesCount: objects.shapes,
+                    tagsCount: objects.tags,
+                  };
+                  addObject(newData);
             })
             .catch((_error: any) => {
                 // eslint-disable-next-line
@@ -119,9 +126,26 @@ function LabelingSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.El
     }
 
     return (
-            <Text strong>{summary.objects}</Text>
+        <table className='cvat-annotation-summary-description'>
+        <tbody>
+            <tr>
+                <td>
+                    <Text strong>O:</Text><Text strong>{summary.objects.shapes}</Text>
+                </td>
+                <td>
+                    <Text strong>A:</Text><Text strong>{summary.objects.tags}</Text>
+                </td>
+            </tr>
+        </tbody>
+    </table>
     );
 }
+
+interface JobData {
+    jobId: string;
+    shapesCount: number;
+    tagsCount: number;
+  }
 
 function JobListComponent(props: Props): JSX.Element {
     const {
@@ -131,6 +155,12 @@ function JobListComponent(props: Props): JSX.Element {
 
     const history = useHistory();
     const { jobs, id: taskId } = taskInstance;
+
+    const [jobDataArray, setJobDataArray] = useState<JobData[]>([]);
+
+    const addObject = (newData: JobData) => {
+      setJobDataArray((prevData: any) => [...prevData, newData]);
+    };
 
     function sorter(path: string) {
         return (obj1: any, obj2: any): number => {
@@ -298,7 +328,7 @@ function JobListComponent(props: Props): JSX.Element {
                 const { objects } = jobInstance;
                 return (
                     <Text>
-                        {<LabelingSummaryComponent jobInstance={jobInstance} />}
+                        {<LabelingSummaryComponent  jobInstance={jobInstance} jobDataArray={jobDataArray} addObject={addObject} />}
                     </Text>
                 );
             },
@@ -333,7 +363,7 @@ function JobListComponent(props: Props): JSX.Element {
     return (
         <div className='cvat-task-job-list'>
             <Row justify='space-between' align='middle'>
-                <Col>
+            <Col>
                     <Text className='cvat-text-color cvat-jobs-header'> Jobs </Text>
                     <CVATTooltip trigger='click' title='Copied to clipboard!'>
                         <Button
@@ -357,7 +387,6 @@ function JobListComponent(props: Props): JSX.Element {
                                     if (job.assignee) {
                                         serialized += `\t assigned to "${job.assignee.username}"`;
                                     }
-
                                     serialized += '\n';
                                 }
                                 copy(serialized);
@@ -365,6 +394,38 @@ function JobListComponent(props: Props): JSX.Element {
                         >
                             <CopyOutlined />
                             Copy
+                        </Button>
+                    </CVATTooltip>
+                </Col>
+                <Col>
+                    <CVATTooltip trigger='click' title='Copied to clipboard!'>
+                        <Button
+                            className='cvat-copy-job-details-button'
+                            type='link'
+                            onClick={(): void => {
+                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Tags\n';
+                                const [latestJob] = [...taskInstance.jobs].reverse();
+
+                                for (const job of taskInstance.jobs) {
+                                    const baseURL = window.location.origin;
+
+                                    const jobID = `Job #${job.id}`;
+                                    const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
+                                    const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
+                                    const assignee = job.assignee ? `"${job.assignee.username}"` : '';
+
+                                    const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
+                                    const shapesCount = jobData ? jobData.shapesCount : 0;
+                                    const tagsCount = jobData ? jobData.tagsCount : 0;
+
+                                    serialized += `${jobID},${url},${frameRange},${assignee},${shapesCount},${tagsCount}\n`;
+                                }
+
+                                copy(serialized);
+                            }}
+                        >
+                            <CopyOutlined />
+                            Info
                         </Button>
                     </CVATTooltip>
                 </Col>
