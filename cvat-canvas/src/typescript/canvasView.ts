@@ -1486,12 +1486,24 @@ export class CanvasViewImpl implements CanvasView, Listener {
             let grid_size: Size = this.geometry.grid;
             const image_size: Size = this.geometry.image;
 
-            if(grid_size.width==5) {
-                grid_size.width = image_size.width/2;
-                grid_size.height = image_size.height/2;
-            } else if(grid_size.height==6) {
-                grid_size.width = image_size.width/3;
-                grid_size.height = image_size.height/3;
+            if (grid_size.width == 5) {
+                grid_size.width = image_size.width / 2;
+                grid_size.height = image_size.height / 1;
+            } else if (grid_size.width == 6) {
+                grid_size.width = image_size.width / 2;
+                grid_size.height = image_size.height / 2;
+            } else if (grid_size.width == 7) {
+                grid_size.width = image_size.width / 2;
+                grid_size.height = image_size.height / 3;
+            } else if (grid_size.width == 8) {
+                grid_size.width = image_size.width / 3;
+                grid_size.height = image_size.height / 3;
+            } else if (grid_size.width == 9) {
+                grid_size.width = image_size.width / 3;
+                grid_size.height = image_size.height / 4;
+            } else if (grid_size.width == 10) {
+                grid_size.width = image_size.width / 4;
+                grid_size.height = image_size.height / 4;
             }
 
             this.gridPattern.setAttribute('width', `${grid_size.width}`);
