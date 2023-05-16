@@ -158,6 +158,13 @@ function JobListComponent(props: Props): JSX.Element {
 
     const [jobDataArray, setJobDataArray] = useState<JobData[]>([]);
 
+    const switchToAnnotationStage = (): void => {
+        for (const job of taskInstance.jobs) {
+            job.stage = JobStage.ANNOTATION;
+            onUpdateJob(job);
+        }
+    };
+
     const addObject = (newData: JobData) => {
       setJobDataArray((prevData: any) => [...prevData, newData]);
     };
@@ -426,6 +433,18 @@ function JobListComponent(props: Props): JSX.Element {
                         >
                             <CopyOutlined />
                             Info
+                        </Button>
+                    </CVATTooltip>
+                </Col>
+                <Col>
+                    <CVATTooltip trigger='click' title='Switch stage to annotation!'>
+                    <Button
+                            className='cvat-copy-job-stage-button'
+                            type='link'
+                            onClick={switchToAnnotationStage}
+                        >
+                            <CopyOutlined />
+                            All to annotation
                         </Button>
                     </CVATTooltip>
                 </Col>
