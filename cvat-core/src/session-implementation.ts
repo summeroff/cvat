@@ -83,10 +83,14 @@ export function implementJob(Job) {
 
     Job.prototype.objects.implementation = async function () {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
+        //sum of shapes attributes
+        const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => {
+            return acc + Object.keys(shape.attributes).length;
+        }, 0);
+
         return {
-            tags: rawAnnotations.tags.length,
-            shapes: rawAnnotations.shapes.length,
-            tracks: rawAnnotations.tracks.length,
+            objects: rawAnnotations.shapes.length,
+            attributes: shapesAttributesSum,
         };
     };
 

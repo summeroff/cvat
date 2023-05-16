@@ -96,8 +96,8 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jo
                 });
                 const newData: JobData = {
                     jobId: jobInstance.id,
-                    shapesCount: objects.shapes,
-                    tagsCount: objects.tags,
+                    objectsCount: objects.objects,
+                    attributesCount: objects.attributes,
                   };
                   addObject(newData);
             })
@@ -130,10 +130,10 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jo
         <tbody>
             <tr>
                 <td>
-                    <Text strong>O:</Text><Text strong>{summary.objects.shapes}</Text>
+                    <Text strong>O:</Text><Text strong>{summary.objects.objects}</Text>
                 </td>
                 <td>
-                    <Text strong>A:</Text><Text strong>{summary.objects.tags}</Text>
+                    <Text strong>A:</Text><Text strong>{summary.objects.attributes}</Text>
                 </td>
             </tr>
         </tbody>
@@ -143,8 +143,8 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jo
 
 interface JobData {
     jobId: string;
-    shapesCount: number;
-    tagsCount: number;
+    objectsCount: number;
+    attributesCount: number;
   }
 
 function JobListComponent(props: Props): JSX.Element {
@@ -403,7 +403,7 @@ function JobListComponent(props: Props): JSX.Element {
                             className='cvat-copy-job-details-button'
                             type='link'
                             onClick={(): void => {
-                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Tags\n';
+                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes\n';
                                 const [latestJob] = [...taskInstance.jobs].reverse();
 
                                 for (const job of taskInstance.jobs) {
@@ -415,10 +415,10 @@ function JobListComponent(props: Props): JSX.Element {
                                     const assignee = job.assignee ? `"${job.assignee.username}"` : '';
 
                                     const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
-                                    const shapesCount = jobData ? jobData.shapesCount : 0;
-                                    const tagsCount = jobData ? jobData.tagsCount : 0;
+                                    const objectsCount = jobData ? jobData.objectsCount : 0;
+                                    const attributesCount = jobData ? jobData.attributesCount : 0;
 
-                                    serialized += `${jobID},${url},${frameRange},${assignee},${shapesCount},${tagsCount}\n`;
+                                    serialized += `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount}\n`;
                                 }
 
                                 copy(serialized);
