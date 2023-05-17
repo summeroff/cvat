@@ -410,7 +410,7 @@ function JobListComponent(props: Props): JSX.Element {
                             className='cvat-copy-job-details-button'
                             type='link'
                             onClick={(): void => {
-                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes\n';
+                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes,Task ID, Project ID\n';
                                 const [latestJob] = [...taskInstance.jobs].reverse();
 
                                 for (const job of taskInstance.jobs) {
@@ -424,8 +424,10 @@ function JobListComponent(props: Props): JSX.Element {
                                     const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
                                     const objectsCount = jobData ? jobData.objectsCount : 0;
                                     const attributesCount = jobData ? jobData.attributesCount : 0;
+                                    const task_id = taskInstance.id;
+                                    const project_id = taskInstance.projectId;
 
-                                    serialized += `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount}\n`;
+                                    serialized += `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount},${task_id},${project_id}\n`;
                                 }
 
                                 copy(serialized);
