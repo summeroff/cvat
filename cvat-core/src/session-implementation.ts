@@ -83,14 +83,35 @@ export function implementJob(Job) {
 
     Job.prototype.objects.implementation = async function () {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
-        //sum of shapes attributes
         const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => {
             return acc + Object.keys(shape.attributes).length;
         }, 0);
 
+        const labels: { [key: string]: { objects: number, attributes: number, true_attributes: number, label_name: string } } = {};
+
+        // Iterate over shapes
+        for (const shape of rawAnnotations.shapes) {
+            if (!labels[shape.label_id])
+            {
+                labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: "" };
+            }
+
+            labels[shape.label_id].objects++;
+            labels[shape.label_id].attributes += Object.keys(shape.attributes).length;
+            let trueAttributesCount = 0;
+
+            for (const attribute of shape.attributes) {
+                if (attribute.value === "true") {
+                    trueAttributesCount++;
+                }
+            }
+
+            labels[shape.label_id].true_attributes += trueAttributesCount;
+        }
         return {
             objects: rawAnnotations.shapes.length,
             attributes: shapesAttributesSum,
+            per_label: labels,
         };
     };
 

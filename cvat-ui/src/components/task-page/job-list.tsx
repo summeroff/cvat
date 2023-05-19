@@ -82,6 +82,34 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
+interface LabelObjects {
+    [key: string]: {
+      objects: number,
+      attributes: number,
+      true_attributes: number,
+      label_name?: string
+    }
+  }
+
+function updateLabelNameInObjects(jobInstance: any, objects: LabelObjects) {
+    for (const label of jobInstance.labels) {
+      for (const attr of label.attributes) {
+        const id:string = attr.id.toString();
+
+        if (objects[id]) {
+          objects[id].label_name = attr.name;
+        } else {
+          objects[id] = {
+            objects: 0,
+            attributes: 0,
+            true_attributes: 0,
+            label_name: attr.name,
+          };
+        }
+      }
+    }
+  }
+
 function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jobInstance: any, jobDataArray: JobData[], addObject: (newData: JobData) => void }): JSX.Element {
     const [summary, setSummary] = useState<Record<string, any> | null>(null);
     const [error, setError] = useState<any>(null);
@@ -94,10 +122,14 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jo
                 setSummary({
                     objects: objects,
                 });
+
+                updateLabelNameInObjects(jobInstance, objects.per_label);
+
                 const newData: JobData = {
                     jobId: jobInstance.id,
                     objectsCount: objects.objects,
                     attributesCount: objects.attributes,
+                    attributesPerLabel: objects.per_label,
                   };
                   addObject(newData);
             })
@@ -145,6 +177,7 @@ interface JobData {
     jobId: string;
     objectsCount: number;
     attributesCount: number;
+    attributesPerLabel: LabelObjects;
   }
 
 function JobListComponent(props: Props): JSX.Element {
@@ -410,28 +443,68 @@ function JobListComponent(props: Props): JSX.Element {
                             className='cvat-copy-job-details-button'
                             type='link'
                             onClick={(): void => {
-                                let serialized = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes,Task ID, Project ID\n';
+                                let header1 = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes';
+                                let header2 = ',,,,,'; // Four empty cells to align with the above headers
                                 const [latestJob] = [...taskInstance.jobs].reverse();
 
+                                const assigneeTotals: { [key: string]: number[] } = {};
+
+                                // Determine the labels to include in the header
+                                if (latestJob) {
+                                  const latestJobData = jobDataArray.find((data: JobData) => data.jobId === latestJob.id);
+                                  if (latestJobData) {
+                                    for (const label in latestJobData.attributesPerLabel) {
+                                      header1 += `,${latestJobData.attributesPerLabel[label].label_name},,`; // 'label' spans across three cells
+                                      header2 += `,Obj,Attr,Attr+`;
+                                    }
+                                  }
+                                }
+
+                                let serialized = header1 + '\n' + header2 + '\n';
+
                                 for (const job of taskInstance.jobs) {
-                                    const baseURL = window.location.origin;
+                                  const baseURL = window.location.origin;
 
-                                    const jobID = `Job #${job.id}`;
-                                    const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
-                                    const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
-                                    const assignee = job.assignee ? `"${job.assignee.username}"` : '';
+                                  const jobID = `Job #${job.id}`;
+                                  const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
+                                  const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
+                                  const assignee = job.assignee ? `"${job.assignee.username}"` : 'none';
 
-                                    const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
-                                    const objectsCount = jobData ? jobData.objectsCount : 0;
-                                    const attributesCount = jobData ? jobData.attributesCount : 0;
-                                    const task_id = taskInstance.id;
-                                    const project_id = taskInstance.projectId;
+                                  const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
+                                  const objectsCount = jobData ? jobData.objectsCount : 0;
+                                  const attributesCount = jobData ? jobData.attributesCount : 0;
 
-                                    serialized += `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount},${task_id},${project_id}\n`;
+                                  let jobDataStr = `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount}`;
+
+                                  if (!assigneeTotals[assignee]) {
+                                    assigneeTotals[assignee] = new Array(header2.split(',').length - 4).fill(0); // Initialize totals for this assignee
+                                  }
+                                  assigneeTotals[assignee][0] += objectsCount;
+                                  assigneeTotals[assignee][1] += attributesCount;
+
+                                  if (jobData) {
+                                    let i = 2;
+                                    for (const label in jobData.attributesPerLabel) {
+                                      jobDataStr += `,${jobData.attributesPerLabel[label].objects},${jobData.attributesPerLabel[label].attributes},${jobData.attributesPerLabel[label].true_attributes}`;
+                                      assigneeTotals[assignee][i] += jobData.attributesPerLabel[label].objects;
+                                      assigneeTotals[assignee][i + 1] += jobData.attributesPerLabel[label].attributes;
+                                      assigneeTotals[assignee][i + 2] += jobData.attributesPerLabel[label].true_attributes;
+                                      i += 3;
+                                    }
+                                  }
+
+                                  serialized += jobDataStr + '\n';
+                                }
+
+                                // Append the total rows
+                                for (const assignee in assigneeTotals) {
+                                  const totalRow = [,,,assignee].concat(assigneeTotals[assignee]).join(',');
+                                  serialized += totalRow + '\n';
                                 }
 
                                 copy(serialized);
-                            }}
+                              }}
+
                         >
                             <CopyOutlined />
                             Info
