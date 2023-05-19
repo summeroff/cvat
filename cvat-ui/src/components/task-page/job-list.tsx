@@ -93,20 +93,18 @@ interface LabelObjects {
 
 function updateLabelNameInObjects(jobInstance: any, objects: LabelObjects) {
     for (const label of jobInstance.labels) {
-      for (const attr of label.attributes) {
-        const id:string = attr.id.toString();
+        const id:string = label.id.toString();
 
         if (objects[id]) {
-          objects[id].label_name = attr.name;
+          objects[id].label_name = label.name;
         } else {
           objects[id] = {
             objects: 0,
             attributes: 0,
             true_attributes: 0,
-            label_name: attr.name,
+            label_name: label.name,
           };
         }
-      }
     }
   }
 
@@ -498,8 +496,8 @@ function JobListComponent(props: Props): JSX.Element {
 
                                 // Append the total rows
                                 for (const assignee in assigneeTotals) {
-                                  const totalRow = [,,,assignee].concat(assigneeTotals[assignee]).join(',');
-                                  serialized += totalRow + '\n';
+                                    const totalRow = [, , , assignee].concat(assigneeTotals[assignee].map(String)).join(',');
+                                    serialized += totalRow + '\n';
                                 }
 
                                 copy(serialized);
