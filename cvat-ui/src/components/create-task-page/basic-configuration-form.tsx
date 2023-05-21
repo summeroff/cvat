@@ -18,6 +18,7 @@ interface Props {
     onChange(values: BaseConfiguration): void;
     many: boolean;
     exampleMultiTaskName?: string;
+    name: string;
 }
 
 export default class BasicConfigurationForm extends React.PureComponent<Props> {
@@ -39,6 +40,12 @@ export default class BasicConfigurationForm extends React.PureComponent<Props> {
         onChange({
             name: this.initialName,
         });
+    }
+
+    public componentDidUpdate(prevProps: Props) {
+        if (this.props.name !== prevProps.name) {
+            this.formRef.current?.setFieldsValue({name: this.props.name});
+        }
     }
 
     private handleChangeName(e: React.ChangeEvent<HTMLInputElement>): void {
@@ -69,7 +76,7 @@ export default class BasicConfigurationForm extends React.PureComponent<Props> {
     }
 
     public render(): JSX.Element {
-        const { many, exampleMultiTaskName } = this.props;
+        const { many, exampleMultiTaskName, name } = this.props;
 
         return (
             <Form ref={this.formRef} layout='vertical'>
@@ -87,6 +94,7 @@ export default class BasicConfigurationForm extends React.PureComponent<Props> {
                 >
                     <Input
                         ref={this.inputRef}
+                        value={name}
                         onChange={(e) => this.handleChangeName(e)}
                     />
                 </Form.Item>

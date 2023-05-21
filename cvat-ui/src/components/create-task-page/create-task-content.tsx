@@ -317,7 +317,7 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
         mime_type: string;
     }[]): void => {
         const { many } = this.props;
-        const { files } = this.state;
+        const { files, basic } = this.state;
 
         let uploadFileErrorMessage = '';
 
@@ -334,10 +334,19 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
         });
 
         if (!uploadFileErrorMessage) {
+            const firstFilePath = shareFiles[0]?.key.trim() || '';
+            const pathParts = firstFilePath.split('/');
+            pathParts.pop();
+            const directoryPath = pathParts.filter(part => part !== '').join('-');
+
             this.setState({
                 files: {
                     ...files,
                     share: shareFiles.map((it) => it.key),
+                },
+                basic: {
+                    ...basic,
+                    name: directoryPath || 'no files',
                 },
             });
         }
@@ -665,6 +674,7 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
 
     private renderBasicBlock(): JSX.Element {
         const { many } = this.props;
+        const { basic } = this.state;
         const exampleMultiTaskName = many ? this.getTaskName(0, 'local', 'fileName.mp4') : '';
 
         return (
@@ -672,6 +682,7 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
                 <BasicConfigurationForm
                     ref={this.basicConfigurationComponent}
                     many={many}
+                    name={basic.name}
                     exampleMultiTaskName={exampleMultiTaskName}
                     onChange={this.handleChangeBasicConfiguration}
                 />
