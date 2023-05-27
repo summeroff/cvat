@@ -15,10 +15,12 @@ import Text from 'antd/lib/typography/Text';
 import moment from 'moment';
 import copy from 'copy-to-clipboard';
 
-import { Task, Job } from 'cvat-core-wrapper';
+import { Task, Job, getCore } from 'cvat-core-wrapper';
 import { JobStage } from 'reducers';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import UserSelector, { User } from './user-selector';
+
+const core = getCore();
 
 interface Props {
     task: Task;
@@ -189,10 +191,13 @@ function JobListComponent(props: Props): JSX.Element {
 
     const [jobDataArray, setJobDataArray] = useState<JobData[]>([]);
 
-    const switchToAnnotationStage = (): void => {
+    const renewAllJobs = (): void => {
         for (const job of taskInstance.jobs) {
-            job.stage = JobStage.ANNOTATION;
-            onUpdateJob(job);
+            if (job.state !== core.enums.JobState.NEW || job.stage !== JobStage.ANNOTATION) {
+                job.state = core.enums.JobState.NEW;
+                job.stage = JobStage.ANNOTATION;
+                onUpdateJob(job);
+            }
         }
     };
 
@@ -510,14 +515,14 @@ function JobListComponent(props: Props): JSX.Element {
                     </CVATTooltip>
                 </Col>
                 <Col>
-                    <CVATTooltip trigger='click' title='Switch stage to annotation!'>
+                    <CVATTooltip trigger='click' title='All Jobs to annotation/new!'>
                     <Button
                             className='cvat-copy-job-stage-button'
                             type='link'
-                            onClick={switchToAnnotationStage}
+                            onClick={renewAllJobs}
                         >
                             <CopyOutlined />
-                            All to annotation
+                            Renew All Jobs
                         </Button>
                     </CVATTooltip>
                 </Col>
