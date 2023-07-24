@@ -16,7 +16,7 @@ from cvat_sdk.api_client.model.file_info import FileInfo
 from deepdiff import DeepDiff
 from PIL import Image
 
-from shared.utils.config import make_api_client
+from shared.utils.config import get_method, make_api_client
 
 from .utils import CollectionSimpleFilterTestBase
 
@@ -112,6 +112,21 @@ class TestGetCloudStorage:
             self._test_can_see(username, storage_id, cloud_storage)
         else:
             self._test_cannot_see(username, storage_id)
+
+    def test_can_remove_owner_and_fetch_with_sdk(self, admin_user, cloud_storages):
+        # test for API schema regressions
+        source_storage = next(
+            s for s in cloud_storages if s.get("owner") and s["owner"]["username"] != admin_user
+        ).copy()
+
+        with make_api_client(admin_user) as api_client:
+            api_client.users_api.destroy(source_storage["owner"]["id"])
+
+            (_, response) = api_client.cloudstorages_api.retrieve(source_storage["id"])
+            fetched_storage = json.loads(response.data)
+
+        source_storage["owner"] = None
+        assert DeepDiff(source_storage, fetched_storage, ignore_order=True) == {}
 
 
 class TestCloudStoragesListFilters(CollectionSimpleFilterTestBase):
@@ -575,3 +590,22 @@ class TestGetCloudStorageContent:
                 break
 
         assert expected_content == current_content
+
+
+@pytest.mark.usefixtures("restore_db_per_class")
+class TestListCloudStorages:
+    def _test_can_see_cloud_storages(self, user, data, **kwargs):
+        response = get_method(user, "cloudstorages", **kwargs)
+
+        assert response.status_code == HTTPStatus.OK
+        assert DeepDiff(data, response.json()["results"]) == {}
+
+    def test_admin_can_see_all_cloud_storages(self, cloud_storages):
+        self._test_can_see_cloud_storages("admin2", cloud_storages.raw, page_size="all")
+
+    @pytest.mark.parametrize("field_value, query_value", [(2, 2), (None, "")])
+    def test_can_filter_by_org_id(self, field_value, query_value, cloud_storages):
+        cloud_storages = filter(lambda i: i["organization"] == field_value, cloud_storages)
+        self._test_can_see_cloud_storages(
+            "admin2", list(cloud_storages), page_size="all", org_id=query_value
+        )

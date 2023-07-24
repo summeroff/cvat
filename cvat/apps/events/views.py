@@ -11,9 +11,9 @@ from rest_framework.renderers import JSONRenderer
 
 
 from cvat.apps.iam.permissions import EventsPermission
+from cvat.apps.iam.filters import ORGANIZATION_OPEN_API_PARAMETERS
 from cvat.apps.events.serializers import ClientEventsSerializer
 from cvat.apps.engine.log import vlogger
-from cvat.apps.engine.schema import ORGANIZATION_OPEN_API_PARAMETERS
 from .export import export
 
 class EventsViewSet(viewsets.ViewSet):
@@ -39,7 +39,7 @@ class EventsViewSet(viewsets.ViewSet):
 
     @extend_schema(summary='Method returns csv log file ',
         methods=['GET'],
-        description='Recieve logs from the server',
+        description='Receive logs from the server',
         parameters=[
             OpenApiParameter('org_id', location=OpenApiParameter.QUERY, type=OpenApiTypes.INT, required=False,
                 description="Filter events by organization ID"),

@@ -5,34 +5,141 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## \[2.5.0] - Unreleased
+## \[Unreleased\]
 ### Added
-- Support share point/cloud storage files and directories that should be excluded when creating a task (server) (<https://github.com/opencv/cvat/pull/6074>)
-- Support task creation with cloud storage/share directories (<https://github.com/opencv/cvat/pull/6074>)
-- Support task creation with any type of data supported by the server by default from cloud storage
-without use_cache option (<https://github.com/opencv/cvat/pull/6074>)
-- Support task creation with cloud storage data and without use_cache option (<https://github.com/opencv/cvat/pull/6074>)
+- Multi-line text attributes supported (<https://github.com/opencv/cvat/pull/6458>)
+- Now you can configure default attribute value for SELECT, RADIO types on UI
+ (<https://github.com/opencv/cvat/pull/6474>)
+- \[SDK\] `cvat_sdk.datasets`, a framework-agnostic equivalent of `cvat_sdk.pytorch`
+  (<https://github.com/opencv/cvat/pull/6428>)
 
 ### Changed
-- Resource links are opened from any organization/sandbox if available for user (<https://github.com/opencv/cvat/pull/5892>)
-- Cloud storage manifest file is optional (<https://github.com/opencv/cvat/pull/6074>)
-- Updated Django to 4.2.x version (<https://github.com/opencv/cvat/pull/6122>)
-- Some Nuclio functions' names were changed to follow a common convention:
-  `onnx-yolov7` -> `onnx-wongkinyiu-yolov7`, `ultralytics-yolov5` -> `pth-ultralytics-yolov5`
-  (<https://github.com/opencv/cvat/pull/6140>)
+- TDB
 
 ### Deprecated
-- The endpoint /cloudstorages/{id}/content was deprecated (<https://github.com/opencv/cvat/pull/6074>)
+- TDB
 
 ### Removed
 - TDB
 
 ### Fixed
-- Skeletons dumping on created tasks/projects (<https://github.com/opencv/cvat/pull/6157>)
-- Fix saving annotations for skeleton tracks (<https://github.com/opencv/cvat/pull/6075>)
+- Calculating number of objects on annotation view when frames are deleted
+ (<https://github.com/opencv/cvat/pull/6493>)
+- \[SDK\] Ability to create attributes with blank default values
+  (<https://github.com/opencv/cvat/pull/6454>)
+- \[SDK\] SDK should not change input data in models (<https://github.com/opencv/cvat/pull/6455>)
+- Export hash for shapes and tags in a corner case (<https://github.com/opencv/cvat/pull/6517>)
+- 3D job can not be opened in validation mode (<https://github.com/opencv/cvat/pull/6507>)
+- Fixed SAM plugin (403 code for workers in organizations) (<https://github.com/opencv/cvat/pull/6514>)
+- Using initial frame from query parameter to open specific frame in a job
+ (<https://github.com/opencv/cvat/pull/6506>)
+- Problem with first keyframe removing (<https://github.com/opencv/cvat/pull/6494>)
+- Server-side validation for attribute specifications
+  (<https://github.com/opencv/cvat/pull/6447>)
+- \[API\] File downloading failures for filenames with special characters l(<https://github.com/opencv/cvat/pull/6492>)
 
 ### Security
 - TDB
+
+## \[2.5.1\] - 2023-07-19
+### Fixed
+- Memory leak related to unclosed av container (<https://github.com/opencv/cvat/pull/6501>)
+
+## \[2.5.0] - 2023-07-05
+### Added
+- Now CVAT supports project/task markdown description with additional assets
+  (png, jpeg, gif, webp images and pdf files) (<https://github.com/opencv/cvat/pull/6191>)
+- Ground Truth jobs and quality analytics for tasks (<https://github.com/opencv/cvat/pull/6039>)
+
+### Fixed
+- The problem with manifest file in tasks restored from backup (<https://github.com/opencv/cvat/issues/5971>)
+- The problem with task mode in a task restored from backup (<https://github.com/opencv/cvat/issues/5668>)
+- Visible 'To background' button in review mode (<https://github.com/opencv/cvat/pull/6363>)
+- Added missed auto_add argument to Issue model (<https://github.com/opencv/cvat/pull/6364>)
+- \[API\] Performance of several API endpoints (<https://github.com/opencv/cvat/pull/6340>)
+- \[API\] Invalid schema for the owner field in several endpoints (<https://github.com/opencv/cvat/pull/6343>)
+- Some internal errors occurring during lambda function invocations
+  could be mistakenly reported as invalid requests
+  (<https://github.com/opencv/cvat/pull/6394>)
+- \[SDK\] Loading tasks that have been cached with the PyTorch adapter
+  (<https://github.com/opencv/cvat/issues/6047>)
+- The problem with importing annotations if dataset has extra dots in filenames
+  (<https://github.com/opencv/cvat/pull/6350>)
+
+### Security
+- More comprehensive SSRF mitigations were implemented.
+  Previously, on task creation it was prohibited to specify remote data URLs
+  with hosts that resolved to IP addresses in the private ranges.
+  Now, redirects to such URLs are also prohibited.
+  In addition, this restriction is now also applied to webhook URLs.
+  System administrators can allow or deny custom IP address ranges
+  with the `SMOKESCREEN_OPTS` environment variable.
+  (<https://github.com/opencv/cvat/pull/6362>).
+
+## \[2.4.9] - 2023-06-22
+### Fixed
+- Error related to calling serverless functions on some image formats (<https://github.com/opencv/cvat/pull/6384>)
+
+## \[2.4.8] - 2023-06-22
+### Fixed
+- Getting original chunks for items in specific cases (<https://github.com/opencv/cvat/pull/6355>)
+
+## \[2.4.7] - 2023-06-16
+### Added
+- \[API\] API Now supports the creation and removal of Ground Truth jobs. (<https://github.com/opencv/cvat/pull/6204>)
+- \[API\] We've introduced task quality estimation endpoints. (<https://github.com/opencv/cvat/pull/6204>)
+- \[CLI\] An option to select the organization. (<https://github.com/opencv/cvat/pull/6317>)
+
+### Fixed
+- Issues with running serverless models for EXIF-rotated images. (<https://github.com/opencv/cvat/pull/6275/>)
+- File uploading issues when using https configuration. (<https://github.com/opencv/cvat/pull/6308>)
+- Dataset export error with `outside` property of tracks. (<https://github.com/opencv/cvat/issues/5971>)
+- Broken logging in the TransT serverless function. (<https://github.com/opencv/cvat/pull/6290>)
+
+## \[2.4.6] - 2023-06-09
+### Added
+- \[Server API\] An option to supply custom file ordering for task data uploads (<https://github.com/opencv/cvat/pull/5083>)
+- New option ``semi-auto`` is available as annotations source (<https://github.com/opencv/cvat/pull/6263>)
+
+### Changed
+- Allowed to use dataset manifest for the `predefined` sorting method for task data (<https://github.com/opencv/cvat/pull/5083>)
+
+### Changed
+- Replaced Apache mod_wsgi with Uvicorn ASGI server for backend use(<https://github.com/opencv/cvat/pull/6195>)
+
+### Fixed
+- Incorrect location of temporary file during job annotation import.(<https://github.com/opencv/cvat/pull/5909>)
+- Deletion of uploaded file along with annotations/backups when an RQ job
+  has been initiated, but no subsequent status check requests have been made.(<https://github.com/opencv/cvat/pull/5909>)
+- Deletion of uploaded files, including annotations and backups,
+  after they have been uploaded to the server using the TUS protocol  but before an RQ job has been initiated. (<https://github.com/opencv/cvat/pull/5909>)
+- Simultaneous creation of tasks or projects with identical names from backups by multiple users.(<https://github.com/opencv/cvat/pull/5909>)
+- \[API\] The `predefined` sorting method for task data uploads (<https://github.com/opencv/cvat/pull/5083>)
+- Allowed slashes in export filenames. (<https://github.com/opencv/cvat/pull/6265>)
+
+## \[2.4.5] - 2023-06-02
+### Added
+- Integrated support for sharepoint and cloud storage files, along with
+  directories to be omitted during task creation (server) (<https://github.com/opencv/cvat/pull/6074>)
+- Enabled task creation with directories from cloud storage or sharepoint  (<https://github.com/opencv/cvat/pull/6074>)
+- Enhanced task creation to support any data type supported by the server
+   by default, from cloud storage without the necessity for the `use_cache` option (<https://github.com/opencv/cvat/pull/6074>)
+- Added capability for task creation with data from cloud storage without the `use_cache` option  (<https://github.com/opencv/cvat/pull/6074>)
+
+### Changed
+- User can now access resource links from any organization or sandbox, granted it's available to them (<https://github.com/opencv/cvat/pull/5892>)
+- Cloud storage manifest files have been made optional (<https://github.com/opencv/cvat/pull/6074>)
+- Updated Django to the 4.2.x version (<https://github.com/opencv/cvat/pull/6122>)
+- Renamed certain Nuclio functions to adhere to a common naming convention. For instance,
+  `onnx-yolov7` -> `onnx-wongkinyiu-yolov7`, `ultralytics-yolov5` -> `pth-ultralytics-yolov5`
+  (<https://github.com/opencv/cvat/pull/6140>)
+
+### Deprecated
+- Deprecated the endpoint `/cloudstorages/{id}/content` (<https://github.com/opencv/cvat/pull/6074>)
+
+### Fixed
+- Fixed the issue of skeletons dumping on created tasks/projects (<https://github.com/opencv/cvat/pull/6157>)
+- Resolved an issue related to saving annotations for skeleton tracks (<https://github.com/opencv/cvat/pull/6075>)
 
 ## \[2.4.4] - 2023-05-18
 ### Added
