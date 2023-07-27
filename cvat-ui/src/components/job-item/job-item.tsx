@@ -29,10 +29,45 @@ import UserSelector from 'components/task-page/user-selector';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import JobActionsMenu from './job-actions-menu';
 
+export interface LabelObjects {
+    [key: string]: {
+        objects: number,
+        attributes: number,
+        true_attributes: number,
+        label_name?: string
+    }
+}
+
+export interface JobData {
+    jobId: string;
+    objectsCount: number;
+    attributesCount: number;
+    attributesPerLabel: LabelObjects;
+}
+
+function updateLabelNameInObjects(jobInstance: any, objects: LabelObjects) {
+    for (const label of jobInstance.labels) {
+        const id: string = label.id.toString();
+
+        if (objects[id]) {
+            objects[id].label_name = label.name;
+        } else {
+            objects[id] = {
+                objects: 0,
+                attributes: 0,
+                true_attributes: 0,
+                label_name: label.name,
+            };
+        }
+    }
+}
+
 interface Props {
     job: Job,
     task: Task,
-    onJobUpdate: (job: Job) => void;
+    onJobUpdate: (job: Job) => void,
+    jobDataArray: any,
+    addObject: (newData: JobData) => void,
 }
 
 function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Element {
@@ -98,8 +133,63 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
+function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jobInstance: any, jobDataArray: JobData[], addObject: (newData: JobData) => void }): JSX.Element {
+    const [summary, setSummary] = useState<Record<string, any> | null>(null);
+    const [error, setError] = useState<any>(null);
+    useEffect(() => {
+        setError(null);
+        jobInstance
+            .objects(jobInstance.id)
+            .then((objects: any) => {
+
+                setSummary({
+                    objects: objects,
+                });
+
+                updateLabelNameInObjects(jobInstance, objects.per_label);
+
+                const newData: JobData = {
+                    jobId: jobInstance.id,
+                    objectsCount: objects.objects,
+                    attributesCount: objects.attributes,
+                    attributesPerLabel: objects.per_label,
+                };
+                addObject(newData);
+            })
+            .catch((_error: any) => {
+                // eslint-disable-next-line
+                console.log(_error);
+                setError(_error);
+            });
+    }, []);
+
+    if (!summary) {
+        if (error) {
+            if (error.toString().includes('403')) {
+                return <p>You do not have permissions</p>;
+            }
+
+            return <p>Could not fetch, check console output</p>;
+        }
+
+        return (
+            <>
+                <p>Loading.. </p>
+                <LoadingOutlined />
+            </>
+        );
+    }
+
+    return (
+        <>
+             <Text type='secondary'>{summary.objects.objects} / {summary.objects.attributes}</Text>
+        </>
+    );
+}
+
+
 function JobItem(props: Props): JSX.Element {
-    const { job, task, onJobUpdate } = props;
+    const { job, task, onJobUpdate, jobDataArray, addObject } = props;
     const { stage, id } = job;
     const created = moment(job.createdDate);
     const updated = moment(job.updatedDate);
@@ -238,6 +328,13 @@ function JobItem(props: Props): JSX.Element {
                                         <Text type='secondary' className='cvat-job-item-frames'>
                                             {`${job.frameCount} (${frameCountPercentRepresentation}%)`}
                                         </Text>
+                                    </Col>
+                                </Row>
+                                <Row>
+                                    <Col>
+                                        <BorderOutlined />
+                                        <Text>Objects: </Text>
+                                        {<LabelingSummaryComponent jobInstance={job} jobDataArray={jobDataArray} addObject={addObject} />}
                                     </Col>
                                 </Row>
                             </Col>
