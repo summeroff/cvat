@@ -96,7 +96,7 @@ function JobListComponent(props: Props): JSX.Element {
     };
 
     const addObject = (newData: JobData) => {
-      setJobDataArray((prevData: any) => [...prevData, newData]);
+        setJobDataArray((prevData: any) => [...prevData, newData]);
     };
 
     const [query, setQuery] = useState<JobsQuery>(updatedQuery);
@@ -154,91 +154,91 @@ function JobListComponent(props: Props): JSX.Element {
                         </Button>
                     </CVATTooltip>
                     <Col>
-                    <CVATTooltip trigger='click' title='Copied to clipboard!'>
-                        <Button
-                            className='cvat-copy-job-details-button'
-                            type='link'
-                            onClick={(): void => {
-                                let header1 = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes';
-                                let header2 = ',,,,,'; // Four empty cells to align with the above headers
-                                const [latestJob] = [...taskInstance.jobs].reverse();
+                        <CVATTooltip trigger='click' title='Copied to clipboard!'>
+                            <Button
+                                className='cvat-copy-job-details-button'
+                                type='link'
+                                onClick={(): void => {
+                                    let header1 = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes';
+                                    let header2 = ',,,,,'; // Four empty cells to align with the above headers
+                                    const [latestJob] = [...taskInstance.jobs].reverse();
 
-                                const assigneeTotals: { [key: string]: number[] } = {};
+                                    const assigneeTotals: { [key: string]: number[] } = {};
 
-                                // Determine the labels to include in the header
-                                if (latestJob) {
-                                  const latestJobData = jobDataArray.find((data: JobData) => data.jobId === latestJob.id);
-                                  if (latestJobData) {
-                                    for (const label in latestJobData.attributesPerLabel) {
-                                      header1 += `,${latestJobData.attributesPerLabel[label].label_name},,`; // 'label' spans across three cells
-                                      header2 += `,Obj,Attr,Attr+`;
+                                    // Determine the labels to include in the header
+                                    if (latestJob) {
+                                        const latestJobData = jobDataArray.find((data: JobData) => data.jobId === latestJob.id);
+                                        if (latestJobData) {
+                                            for (const label in latestJobData.attributesPerLabel) {
+                                                header1 += `,${latestJobData.attributesPerLabel[label].label_name},,`; // 'label' spans across three cells
+                                                header2 += `,Obj,Attr,Attr+`;
+                                            }
+                                        }
                                     }
-                                  }
-                                }
 
-                                let serialized = header1 + '\n' + header2 + '\n';
+                                    let serialized = header1 + '\n' + header2 + '\n';
 
-                                for (const job of taskInstance.jobs) {
-                                  const baseURL = window.location.origin;
+                                    for (const job of taskInstance.jobs) {
+                                        const baseURL = window.location.origin;
 
-                                  const jobID = `Job #${job.id}`;
-                                  const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
-                                  const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
-                                  const assignee = job.assignee ? `"${job.assignee.username}"` : 'none';
+                                        const jobID = `Job #${job.id}`;
+                                        const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
+                                        const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
+                                        const assignee = job.assignee ? `"${job.assignee.username}"` : 'none';
 
-                                  const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
-                                  const objectsCount = jobData ? jobData.objectsCount : 0;
-                                  const attributesCount = jobData ? jobData.attributesCount : 0;
+                                        const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
+                                        const objectsCount = jobData ? jobData.objectsCount : 0;
+                                        const attributesCount = jobData ? jobData.attributesCount : 0;
 
-                                  let jobDataStr = `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount}`;
+                                        let jobDataStr = `${jobID},${url},${frameRange},${assignee},${objectsCount},${attributesCount}`;
 
-                                  if (!assigneeTotals[assignee]) {
-                                    assigneeTotals[assignee] = new Array(header2.split(',').length - 4).fill(0); // Initialize totals for this assignee
-                                  }
-                                  assigneeTotals[assignee][0] += objectsCount;
-                                  assigneeTotals[assignee][1] += attributesCount;
+                                        if (!assigneeTotals[assignee]) {
+                                            assigneeTotals[assignee] = new Array(header2.split(',').length - 4).fill(0); // Initialize totals for this assignee
+                                        }
+                                        assigneeTotals[assignee][0] += objectsCount;
+                                        assigneeTotals[assignee][1] += attributesCount;
 
-                                  if (jobData) {
-                                    let i = 2;
-                                    for (const label in jobData.attributesPerLabel) {
-                                      jobDataStr += `,${jobData.attributesPerLabel[label].objects},${jobData.attributesPerLabel[label].attributes},${jobData.attributesPerLabel[label].true_attributes}`;
-                                      assigneeTotals[assignee][i] += jobData.attributesPerLabel[label].objects;
-                                      assigneeTotals[assignee][i + 1] += jobData.attributesPerLabel[label].attributes;
-                                      assigneeTotals[assignee][i + 2] += jobData.attributesPerLabel[label].true_attributes;
-                                      i += 3;
+                                        if (jobData) {
+                                            let i = 2;
+                                            for (const label in jobData.attributesPerLabel) {
+                                                jobDataStr += `,${jobData.attributesPerLabel[label].objects},${jobData.attributesPerLabel[label].attributes},${jobData.attributesPerLabel[label].true_attributes}`;
+                                                assigneeTotals[assignee][i] += jobData.attributesPerLabel[label].objects;
+                                                assigneeTotals[assignee][i + 1] += jobData.attributesPerLabel[label].attributes;
+                                                assigneeTotals[assignee][i + 2] += jobData.attributesPerLabel[label].true_attributes;
+                                                i += 3;
+                                            }
+                                        }
+
+                                        serialized += jobDataStr + '\n';
                                     }
-                                  }
 
-                                  serialized += jobDataStr + '\n';
-                                }
+                                    // Append the total rows
+                                    for (const assignee in assigneeTotals) {
+                                        const totalRow = [, , , assignee].concat(assigneeTotals[assignee].map(String)).join(',');
+                                        serialized += totalRow + '\n';
+                                    }
 
-                                // Append the total rows
-                                for (const assignee in assigneeTotals) {
-                                    const totalRow = [, , , assignee].concat(assigneeTotals[assignee].map(String)).join(',');
-                                    serialized += totalRow + '\n';
-                                }
+                                    copy(serialized);
+                                }}
 
-                                copy(serialized);
-                              }}
-
-                        >
-                            <CopyOutlined />
-                            Info
-                        </Button>
-                    </CVATTooltip>
-                </Col>
-                <Col>
-                    <CVATTooltip trigger='click' title='All Jobs to annotation/new!'>
-                    <Button
-                            className='cvat-copy-job-stage-button'
-                            type='link'
-                            onClick={renewAllJobs}
-                        >
-                            <CopyOutlined />
-                            Renew All Jobs
-                        </Button>
-                    </CVATTooltip>
-                </Col>
+                            >
+                                <CopyOutlined />
+                                Info
+                            </Button>
+                        </CVATTooltip>
+                    </Col>
+                    <Col>
+                        <CVATTooltip trigger='click' title='All Jobs to annotation/new!'>
+                            <Button
+                                className='cvat-copy-job-stage-button'
+                                type='link'
+                                onClick={renewAllJobs}
+                            >
+                                <CopyOutlined />
+                                Renew All Jobs
+                            </Button>
+                        </CVATTooltip>
+                    </Col>
                 </Row>
                 <Row>
                     <SortingComponent

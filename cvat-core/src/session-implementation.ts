@@ -37,26 +37,26 @@ import {
 import AnnotationGuide from './guide';
 
 // must be called with task/job context
-async function deleteFrameWrapper(jobID, frame) {
+async function deleteFrameWrapper(jobID, frame): Promise<void> {
     const history = getHistory(this);
-    const redo = async () => {
+    const redo = async (): Promise<void> => {
         deleteFrame(jobID, frame);
     };
 
     await redo();
-    history.do(HistoryActions.REMOVED_FRAME, async () => {
+    history.do(HistoryActions.REMOVED_FRAME, async (): Promise<void> => {
         restoreFrame(jobID, frame);
     }, redo, [], frame);
 }
 
-async function restoreFrameWrapper(jobID, frame) {
+async function restoreFrameWrapper(jobID, frame): Promise<void> {
     const history = getHistory(this);
-    const redo = async () => {
+    const redo = async (): Promise<void> => {
         restoreFrame(jobID, frame);
     };
 
     await redo();
-    history.do(HistoryActions.RESTORED_FRAME, async () => {
+    history.do(HistoryActions.RESTORED_FRAME, async (): Promise<void> => {
         deleteFrame(jobID, frame);
     }, redo, [], frame);
 }
@@ -98,18 +98,15 @@ export function implementJob(Job) {
         return result.map((issue) => new Issue(issue));
     };
 
-    Job.prototype.objects.implementation = async function () {
+    Job.prototype.objects.implementation = async function (): Promise<{ objects: number; attributes: number; per_label: { [key: string]: { objects: number; attributes: number; true_attributes: number; label_name: string } } }> {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
-        const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => {
-            return acc + Object.keys(shape.attributes).length;
-        }, 0);
+        const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => acc + Object.keys(shape.attributes).length, 0);
 
-        const labels: { [key: string]: { objects: number, attributes: number, true_attributes: number, label_name: string } } = {};
+        const labels: { [key: string]: { objects: number; attributes: number; true_attributes: number; label_name: string } } = {};
 
         // Iterate over shapes
         for (const shape of rawAnnotations.shapes) {
-            if (!labels[shape.label_id])
-            {
+            if (!labels[shape.label_id]) {
                 labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: "" };
             }
 
@@ -118,13 +115,14 @@ export function implementJob(Job) {
             let trueAttributesCount = 0;
 
             for (const attribute of shape.attributes) {
-                if (attribute.value === "true") {
+                if (attribute.value === 'true') {
                     trueAttributesCount++;
                 }
             }
 
             labels[shape.label_id].true_attributes += trueAttributesCount;
         }
+
         return {
             objects: rawAnnotations.shapes.length,
             attributes: shapesAttributesSum,

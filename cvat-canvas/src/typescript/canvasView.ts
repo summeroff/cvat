@@ -1492,32 +1492,31 @@ export class CanvasViewImpl implements CanvasView, Listener {
         } else if (reason === UpdateReasons.ISSUE_REGIONS_UPDATED) {
             this.setupIssueRegions(this.controller.issueRegions);
         } else if (reason === UpdateReasons.GRID_UPDATED) {
-            let grid_size: Size = this.geometry.grid;
-            const image_size: Size = this.geometry.image;
+            const gridSize: Size = this.geometry.grid;
+            const imageSize: Size = this.geometry.image;
 
-            if (grid_size.width == 5) {
-                grid_size.width = image_size.width / 2;
-                grid_size.height = image_size.height / 1;
-            } else if (grid_size.width == 6) {
-                grid_size.width = image_size.width / 2;
-                grid_size.height = image_size.height / 2;
-            } else if (grid_size.width == 7) {
-                grid_size.width = image_size.width / 2;
-                grid_size.height = image_size.height / 3;
-            } else if (grid_size.width == 8) {
-                grid_size.width = image_size.width / 3;
-                grid_size.height = image_size.height / 3;
-            } else if (grid_size.width == 9) {
-                grid_size.width = image_size.width / 3;
-                grid_size.height = image_size.height / 4;
-            } else if (grid_size.width == 10) {
-                grid_size.width = image_size.width / 4;
-                grid_size.height = image_size.height / 4;
+            if (gridSize.width === 5) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 1;
+            } else if (gridSize.width === 6) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 2;
+            } else if (gridSize.width === 7) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 3;
+            } else if (gridSize.width === 8) {
+                gridSize.width = imageSize.width / 3;
+                gridSize.height = imageSize.height / 3;
+            } else if (gridSize.width === 9) {
+                gridSize.width = imageSize.width / 3;
+                gridSize.height = imageSize.height / 4;
+            } else if (gridSize.width === 10) {
+                gridSize.width = imageSize.width / 4;
+                gridSize.height = imageSize.height / 4;
             }
 
-            this.gridPattern.setAttribute('width', `${grid_size.width}`);
-            this.gridPattern.setAttribute('height', `${grid_size.height}`);
-
+            this.gridPattern.setAttribute('width', `${gridSize.width}`);
+            this.gridPattern.setAttribute('height', `${gridSize.height}`);
         } else if (reason === UpdateReasons.SHAPE_FOCUSED) {
             const { padding, clientID } = this.controller.focusData;
             const object = this.svgShapes[clientID];

@@ -133,7 +133,8 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
     );
 }
 
-function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jobInstance: any, jobDataArray: JobData[], addObject: (newData: JobData) => void }): JSX.Element {
+function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }:
+    { jobInstance: any, jobDataArray: JobData[], addObject: (newData: JobData) => void }): JSX.Element {
     const [summary, setSummary] = useState<Record<string, any> | null>(null);
     const [error, setError] = useState<any>(null);
     useEffect(() => {
@@ -182,7 +183,7 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }: { jo
 
     return (
         <>
-             <Text type='secondary'>{summary.objects.objects} / {summary.objects.attributes}</Text>
+            <Text type='secondary'>{summary.objects.objects} / {summary.objects.attributes}</Text>
         </>
     );
 }
