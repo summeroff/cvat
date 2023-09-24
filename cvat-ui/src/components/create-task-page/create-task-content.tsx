@@ -878,7 +878,7 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
             return (<Alert message={status} />);
         }
         return (
-            <Row justify='end' gutter={5}>
+            <Row justify='end' gutter={8}>
                 <Col>
                     <Button
                         className='cvat-submit-open-task-button'
