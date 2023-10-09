@@ -189,7 +189,7 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }:
 }
 
 
-function JobItem(props: Props): JSX.Element {
+function JobItemFull(props: Props): JSX.Element {
     const { job, task, onJobUpdate, jobDataArray, addObject } = props;
     const { stage, id } = job;
     const created = moment(job.createdDate);
@@ -329,13 +329,139 @@ function JobItem(props: Props): JSX.Element {
                                         </Text>
                                     </Col>
                                 </Row>
-                                <Row>
-                                    <Col>
-                                        <BorderOutlined />
-                                        <Text>Objects: </Text>
-                                        {<LabelingSummaryComponent jobInstance={job} jobDataArray={jobDataArray} addObject={addObject} />}
+                            </Col>
+                        </Row>
+                    </Col>
+                </Row>
+                <Dropdown overlay={<JobActionsMenu job={job} onJobUpdate={onJobUpdate} />}>
+                    <MoreOutlined className='cvat-job-item-more-button' />
+                </Dropdown>
+            </Card>
+        </Col>
+    );
+}
+
+
+function JobItem(props: Props): JSX.Element {
+    const { job, task, onJobUpdate, jobDataArray, addObject } = props;
+    const { stage, id } = job;
+    const created = moment(job.createdDate);
+    const updated = moment(job.updatedDate);
+    const now = moment(moment.now());
+    const deletes = useSelector((state: CombinedState) => state.jobs.activities.deletes);
+    const deleted = id in deletes ? deletes[id] === true : false;
+    const style = {};
+    if (deleted) {
+        (style as any).pointerEvents = 'none';
+        (style as any).opacity = 0.5;
+    }
+    const frameCountPercent = ((job.frameCount / (task.size || 1)) * 100).toFixed(0);
+    const frameCountPercentRepresentation = frameCountPercent === '0' ? '<1' : frameCountPercent;
+    return (
+        <Col span={24}>
+            <Card className='cvat-job-compact-item' style={{ ...style }} data-row-id={job.id}>
+                <Row>
+                    <Col span={2}>
+                        <Row className='cvat-job-item-dates-info'>
+                            <Col>
+                                <Link to={`/tasks/${job.taskId}/jobs/${job.id}`}>{`Job #${job.id}`}</Link>
+                            </Col>
+                            {
+                                job.type === JobType.GROUND_TRUTH && (
+                                    <Col offset={1}>
+                                        <Tag color='#ED9C00'>Ground truth</Tag>
                                     </Col>
+                                )
+                            }
+                        </Row>
+                    </Col>
+                    <Col span={5}>
+                        <Row className='cvat-job-item-dates-info'>
+                            <Col>
+                                <Text type='secondary'>{`${updated.format('MMMM Do YYYY HH:mm')}`}</Text>
+                            </Col>
+                        </Row>
+                    </Col>
+                    <Col span={4}>
+                        <Row className='cvat-job-item-selects' justify='space-between'>
+                            <Col className='cvat-job-item-select'>
+                                <Row>
+
+                                    <UserSelector
+                                        className='cvat-job-assignee-selector'
+                                        value={job.assignee}
+                                        onSelect={(user: User | null): void => {
+                                            if (job?.assignee?.id === user?.id) return;
+                                            job.assignee = user;
+                                            onJobUpdate(job);
+                                        }}
+                                    />
                                 </Row>
+                            </Col>
+                        </Row>
+                    </Col>
+
+                    <Col span={4}>
+                        <Row className='cvat-job-item-selects' justify='space-between'>
+                            <Col className='cvat-job-item-select'>
+                                <Row justify='space-between' align='middle'>
+                                    <Col>
+                                        <CVATTooltip title={<ReviewSummaryComponent jobInstance={job} />}>
+                                            <QuestionCircleOutlined />
+                                        </CVATTooltip>
+                                    </Col>
+
+                                    <Select
+                                        className='cvat-job-item-stage'
+                                        value={stage}
+                                        onChange={(newValue: JobStage) => {
+                                            job.stage = newValue;
+                                            onJobUpdate(job);
+                                        }}
+                                    >
+                                        <Select.Option value={JobStage.ANNOTATION}>
+                                            {JobStage.ANNOTATION}
+                                        </Select.Option>
+                                        <Select.Option value={JobStage.VALIDATION}>
+                                            {JobStage.VALIDATION}
+                                        </Select.Option>
+                                        <Select.Option value={JobStage.ACCEPTANCE}>
+                                            {JobStage.ACCEPTANCE}
+                                        </Select.Option>
+                                    </Select>
+                                </Row>
+                            </Col>
+                        </Row>
+                    </Col>
+                    <Col span={3}>
+                        <Row className='cvat-job-item-details'>
+                            <Col>
+                                <Text>State: </Text>
+                                <Text type='secondary' className='cvat-job-item-state'>
+                                    {`${job.state.charAt(0).toUpperCase() + job.state.slice(1)}`}
+                                </Text>
+                            </Col>
+                        </Row>
+                    </Col>
+                    <Col span={3}>
+                        <Row className='cvat-job-item-details'>
+                            {
+                                job.type !== JobType.GROUND_TRUTH && (
+                                    <Col>
+                                        <Text>Frames: </Text>
+                                        <Text type='secondary' className='cvat-job-item-frame-range'>
+                                            {`${job.startFrame}-${job.stopFrame}`}
+                                        </Text>
+                                    </Col>
+                                )
+                            }
+                        </Row>
+                    </Col>
+                    <Col span={3}>
+                        <Row className='cvat-job-item-details'>
+                            <Col>
+                                <Text>Objects: </Text>
+                                {<LabelingSummaryComponent jobInstance={job} jobDataArray={jobDataArray} addObject={addObject} />}
                             </Col>
                         </Row>
                     </Col>

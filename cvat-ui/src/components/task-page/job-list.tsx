@@ -12,7 +12,7 @@ import { useHistory } from 'react-router';
 import { Row, Col } from 'antd/lib/grid';
 import Text from 'antd/lib/typography/Text';
 import Pagination from 'antd/lib/pagination';
-import { JobStage } from 'reducers';
+import { JobStage } from 'cvat-core/src/enums';
 import Empty from 'antd/lib/empty';
 import Button from 'antd/lib/button';
 import { CopyOutlined, PlusOutlined } from '@ant-design/icons';

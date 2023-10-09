@@ -397,6 +397,26 @@ class TaskQuerySet(models.QuerySet):
                 'segment__job',
                 filter=models.Q(segment__job__stage=StageChoice.VALIDATION.value),
                 distinct=True,
+            ),
+            finished_jobs_count=models.Count(
+                'segment__job',
+                filter=models.Q(segment__job__state=StateChoice.COMPLETED.value),
+                distinct=True,
+            ),
+            inprogress_jobs_count=models.Count(
+                'segment__job',
+                filter=models.Q(segment__job__state=StateChoice.IN_PROGRESS.value),
+                distinct=True,
+            ),
+            rejected_jobs_count=models.Count(
+                'segment__job',
+                filter=models.Q(segment__job__state=StateChoice.REJECTED.value),
+                distinct=True,
+            ),
+            fresh_jobs_count=models.Count(
+                'segment__job',
+                filter=models.Q(segment__job__state=StateChoice.NEW.value),
+                distinct=True,
             )
         )
 
@@ -464,6 +484,30 @@ class Task(models.Model):
 
     @cached_property
     def validation_jobs_count(self) -> Optional[int]:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+    @cached_property
+    def finished_jobs_count(self) -> Optional[int]:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+    @cached_property
+    def inprogress_jobs_count(self) -> Optional[int]:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+    @cached_property
+    def rejected_jobs_count(self) -> Optional[int]:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+    @cached_property
+    def fresh_jobs_count(self) -> Optional[int]:
         # Requires this field to be defined externally,
         # e.g. by calling Task.objects.with_job_summary,
         # to avoid unexpected DB queries on access.

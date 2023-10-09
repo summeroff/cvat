@@ -139,6 +139,11 @@ class JobsSummarySerializer(_CollectionSummarySerializer):
     completed = serializers.IntegerField(source='completed_jobs_count', allow_null=True)
     validation = serializers.IntegerField(source='validation_jobs_count', allow_null=True)
 
+    finished = serializers.IntegerField(source='finished_jobs_count', allow_null=True)
+    inprogress = serializers.IntegerField(source='inprogress_jobs_count', allow_null=True)
+    rejected = serializers.IntegerField(source='rejected_jobs_count', allow_null=True)
+    fresh = serializers.IntegerField(source='fresh_jobs_count', allow_null=True)
+
     def __init__(self, *, model=models.Job, url_filter_key, **kwargs):
         super().__init__(model=model, url_filter_key=url_filter_key, **kwargs)
 

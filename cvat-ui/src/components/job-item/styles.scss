@@ -70,3 +70,68 @@
         }
     }
 }
+
+.cvat-job-compact-item {
+    border: 1px solid $border-color-1;
+    border-radius: 3px;
+    background: $background-color-1;
+
+    &:hover {
+        border: 1px solid $border-color-hover;
+    }
+
+    .cvat-job-item-icon {
+        .anticon svg {
+            fill: #fc3;
+        }
+    }
+
+    .ant-card-body {
+        padding: calc($grid-unit-size / 2);  // Reduced padding from 2x to 1x
+        min-height: $grid-unit-size * 5;  // Reduced min-height slightly
+    }
+
+    .cvat-job-item-selects {
+        padding-top: calc($grid-unit-size / 2);  // Reduced padding-top by half
+
+        .cvat-job-item-select {
+            >div:first-child {
+                margin-bottom: calc($grid-unit-size / 2);  // Reduced margin-bottom by half
+            }
+
+            .anticon {
+                margin: $grid-unit-size;
+            }
+        }
+
+        .cvat-job-assignee-selector {
+            margin-right: $grid-unit-size;
+        }
+    }
+
+    .cvat-job-item-details {
+        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
+    }
+
+    .cvat-job-item-more-button {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-100%);
+        font-size: 16px;
+        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
+        padding: 0 $grid-unit-size;
+    }
+
+    .cvat-job-item-dates-info {
+        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
+    }
+
+    .cvat-job-assignee-selector {
+        max-width: $grid-unit-size * 14;  // Reduced max-width slightly
+
+        @media screen and (max-width: 1620px) {
+            max-width: $grid-unit-size * 10;  // Reduced max-width for smaller screens
+        }
+    }
+}

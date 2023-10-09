@@ -650,6 +650,7 @@ export class Task extends Session {
     public readonly targetStorage: Storage;
     public readonly organization: number | null;
     public readonly progress: { count: number; completed: number };
+    public readonly state_progress: { finished: number; inprogress: number; rejected: number; fresh: number };
     public readonly jobs: Job[];
 
     public readonly startFrame: number;
@@ -732,6 +733,7 @@ export class Task extends Session {
             target_storage: undefined,
             organization: undefined,
             progress: undefined,
+            state_progress: undefined,
             labels: undefined,
             jobs: undefined,
 
@@ -813,6 +815,13 @@ export class Task extends Session {
                 data.jobs.push(jobInstance);
             }
         }
+
+        data.state_progress = {
+            finished: initialData?.jobs?.validation || 0,
+            inprogress:  initialData?.jobs?.inprogress || 0,
+            rejected:  initialData?.jobs?.rejected || 0,
+            fresh:  initialData?.jobs?.fresh || 0,
+        };
 
         Object.defineProperties(
             this,
@@ -1070,6 +1079,9 @@ export class Task extends Session {
                 },
                 progress: {
                     get: () => data.progress,
+                },
+                state_progress: {
+                    get: () => data.state_progress,
                 },
                 _internalData: {
                     get: () => data,
