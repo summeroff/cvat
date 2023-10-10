@@ -187,7 +187,7 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
         const numOfNew = taskInstance.state_progress.fresh;
 
         // Progress appearance depends on number of jobs
-        const jobsProgress = ((numOfFinished) * 100) / numOfJobs;
+        const jobsProgress = ((numOfCompleted + numOfValidation) * 100) / numOfJobs;
 
         return (
             <Col span={7}>
@@ -248,9 +248,6 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                                     {`\u2022 ${numOfNew} new`}
                                 </Text>
                             )}
-                            <Text strong type='secondary'>
-                                {`\u2022 ${numOfJobs} total`}
-                            </Text>
                         </div>
                     </Col>
                 </Row>
