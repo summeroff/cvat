@@ -34,7 +34,8 @@ export interface LabelObjects {
         objects: number,
         attributes: number,
         true_attributes: number,
-        label_name?: string
+        label_name?: string,
+        true_attributes_sums: { [id: string]: { count: number, name: string } }
     }
 }
 
@@ -57,7 +58,20 @@ function updateLabelNameInObjects(jobInstance: any, objects: LabelObjects) {
                 attributes: 0,
                 true_attributes: 0,
                 label_name: label.name,
+                true_attributes_sums: {}
             };
+        }
+
+        for (const attr of label.attributes) {
+            if (attr.input_type === 'checkbox' || attr.inputType === 'checkbox') {
+                if (typeof objects[id].true_attributes_sums[attr.id] === 'object') {
+                    objects[id].true_attributes_sums[attr.id].name = attr.name;
+                } else {
+                    objects[id].true_attributes_sums[attr.id] = { count: 0, name: attr.name };
+                }
+            } else {
+                delete objects[id].true_attributes_sums[attr.id];
+            }
         }
     }
 }
@@ -146,14 +160,13 @@ function LabelingSummaryComponent({ jobInstance, jobDataArray, addObject }:
                 setSummary({
                     objects: objects,
                 });
-
                 updateLabelNameInObjects(jobInstance, objects.per_label);
 
                 const newData: JobData = {
                     jobId: jobInstance.id,
                     objectsCount: objects.objects,
                     attributesCount: objects.attributes,
-                    attributesPerLabel: objects.per_label,
+                    attributesPerLabel: JSON.parse(JSON.stringify(objects.per_label)),
                 };
                 addObject(newData);
             })

@@ -111,30 +111,35 @@ export function implementJob(Job) {
         return result.map((issue) => new Issue(issue));
     };
 
-    Job.prototype.objects.implementation = async function (): Promise<{ objects: number; attributes: number; per_label: { [key: string]: { objects: number; attributes: number; true_attributes: number; label_name: string } } }> {
+    Job.prototype.objects.implementation = async function (): Promise<{ /* return type */ }> {
         const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
-        const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => acc + Object.keys(shape.attributes).length, 0);
 
-        const labels: { [key: string]: { objects: number; attributes: number; true_attributes: number; label_name: string } } = {};
+        const labels: { [key: string]: { /* label object */ } } = {};
 
-        // Iterate over shapes
         for (const shape of rawAnnotations.shapes) {
             if (!labels[shape.label_id]) {
-                labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: "" };
+                labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: "", true_attributes_sums: {} };
             }
 
             labels[shape.label_id].objects++;
-            labels[shape.label_id].attributes += Object.keys(shape.attributes).length;
-            let trueAttributesCount = 0;
+            labels[shape.label_id].attributes += shape.attributes.length;  // Changed this line
 
             for (const attribute of shape.attributes) {
-                if (attribute.value === 'true') {
-                    trueAttributesCount++;
+                const spec_id = attribute.spec_id.toString();
+                const value = attribute.value;
+
+                if (!labels[shape.label_id].true_attributes_sums[spec_id]) {
+                    labels[shape.label_id].true_attributes_sums[spec_id] = { count: 0, name: "" }; // Initialize as an object
+                }
+
+                if (value === 'true') {
+                    labels[shape.label_id].true_attributes++;
+                    labels[shape.label_id].true_attributes_sums[spec_id].count++; // Increment count
                 }
             }
-
-            labels[shape.label_id].true_attributes += trueAttributesCount;
         }
+
+        const shapesAttributesSum = rawAnnotations.shapes.reduce((acc, shape) => acc + shape.attributes.length, 0);  // Moved this line here
 
         return {
             objects: rawAnnotations.shapes.length,

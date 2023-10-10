@@ -172,11 +172,19 @@ function JobListComponent(props: Props): JSX.Element {
                                             for (const label in latestJobData.attributesPerLabel) {
                                                 header1 += `,${latestJobData.attributesPerLabel[label].label_name},,`; // 'label' spans across three cells
                                                 header2 += `,Obj,Attr,Attr+`;
+
+                                                // Add per-attribute headers
+                                                for (const attributeKey in latestJobData.attributesPerLabel[label].true_attributes_sums) {
+                                                    const attributeName = latestJobData.attributesPerLabel[label].true_attributes_sums[attributeKey].name;
+                                                    header2 += `,${attributeName}`;
+                                                    header1 += `,`;
+                                                }
                                             }
                                         }
                                     }
 
                                     let serialized = header1 + '\n' + header2 + '\n';
+                                    const totalJobs = new Array(header2.split(',').length - 4).fill(0);
 
                                     for (const job of taskInstance.jobs) {
                                         const baseURL = window.location.origin;
@@ -205,18 +213,41 @@ function JobListComponent(props: Props): JSX.Element {
                                                 assigneeTotals[assignee][i] += jobData.attributesPerLabel[label].objects;
                                                 assigneeTotals[assignee][i + 1] += jobData.attributesPerLabel[label].attributes;
                                                 assigneeTotals[assignee][i + 2] += jobData.attributesPerLabel[label].true_attributes;
-                                                i += 3;
+
+                                                let attributeIndex = i + 3;
+
+                                                for (const attributeKey in jobData.attributesPerLabel[label].true_attributes_sums) {
+                                                    const attributeCount = jobData.attributesPerLabel[label].true_attributes_sums[attributeKey].count;
+                                                    jobDataStr += `,${attributeCount}`;
+
+                                                    if (assigneeTotals[assignee][attributeIndex] === undefined) {
+                                                        assigneeTotals[assignee][attributeIndex] = 0;
+                                                    }
+                                                    assigneeTotals[assignee][attributeIndex] += attributeCount;
+                                                    attributeIndex++;  // Move to the next attribute index
+                                                }
+
+                                                i = attributeIndex;  // Update 'i' for the next label
                                             }
                                         }
+
 
                                         serialized += jobDataStr + '\n';
                                     }
 
-                                    // Append the total rows
                                     for (const assignee in assigneeTotals) {
                                         const totalRow = [, , , assignee].concat(assigneeTotals[assignee].map(String)).join(',');
                                         serialized += totalRow + '\n';
                                     }
+
+                                    for (const assignee in assigneeTotals) {
+                                        for (let j = 0; j < assigneeTotals[assignee].length; j++) {
+                                            totalJobs[j] = (totalJobs[j] || 0) + (assigneeTotals[assignee][j] || 0);
+                                        }
+                                    }
+
+                                    const totalJobsRow = [, , , 'All Jobs'].concat(totalJobs.map(String)).join(',');
+                                    serialized += totalJobsRow + '\n';
 
                                     copy(serialized);
                                 }}
