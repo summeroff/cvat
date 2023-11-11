@@ -240,6 +240,7 @@ keydb:
   enabled: true
   external:
     host: 127.0.0.1
+  imageTag: x86_64_v6.3.4
   existingSecret: "cvat-keydb-secret"
   secret:
     create: true
@@ -309,6 +310,9 @@ clickhouse:
     username: user
     existingSecret: cvat-analytics-secret
     existingSecretKey: CLICKHOUSE_PASSWORD
+  # Consider enabling zookeeper if a distributed configuration is used
+  zookeeper:
+    enabled: false
 
 grafana:
   datasources:
