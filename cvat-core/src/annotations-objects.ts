@@ -1,5 +1,5 @@
 // Copyright (C) 2019-2022 Intel Corporation
-// Copyright (C) 2022-2023 CVAT.ai Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +7,9 @@ import { omit } from 'lodash';
 import config from './config';
 import ObjectState, { SerializedData } from './object-state';
 import { checkObjectType, clamp } from './common';
-import { DataError, ArgumentError, ScriptingError } from './exceptions';
+import {
+    DataError, ArgumentError, ScriptingError,
+} from './exceptions';
 import { Label } from './labels';
 import {
     colors, Source, ShapeType, ObjectType, HistoryActions, DimensionType, JobType,
@@ -1856,22 +1858,44 @@ export class SkeletonShape extends Shape {
         this.pinned = false;
         this.rotation = 0;
         this.occluded = false;
-        this.points = undefined;
+        this.points = [];
         this.readOnlyFields = ['points', 'label', 'occluded'];
 
-        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
-        this.elements = data.elements.map((element) => shapeFactory({
-            ...element,
-            group: this.group,
-            z_order: this.zOrder,
-            source: this.source,
-            rotation: 0,
-            frame: data.frame,
-        }, injection.nextClientID(), {
-            ...injection,
-            parentID: this.clientID,
-            readOnlyFields: ['group', 'zOrder', 'source', 'rotation'],
-        })) as any as Shape[];
+        const [cx, cy] = data.elements.reduce((acc, element, idx) => {
+            const result = [acc[0] + element.points[0], acc[1] + element.points[1]];
+            if (idx === data.elements.length - 1) {
+                // length can not be 0 because we are inside reduce
+                result[0] /= data.elements.length;
+                result[1] /= data.elements.length;
+            }
+            return result;
+        }, [0, 0]);
+
+        this.elements = this.label.structure.sublabels.map((sublabel: Label) => {
+            const element = data.elements.find((_element) => _element.label_id === sublabel.id);
+            const elementData = element || {
+                label_id: sublabel.id,
+                attributes: [],
+                occluded: false,
+                outside: true,
+                points: [cx, cy],
+                type: sublabel.type as unknown as ShapeType,
+            };
+
+            /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
+            return shapeFactory({
+                ...elementData,
+                group: this.group,
+                z_order: this.zOrder,
+                source: this.source,
+                rotation: 0,
+                frame: data.frame,
+            }, injection.nextClientID(), {
+                ...injection,
+                parentID: this.clientID,
+                readOnlyFields: ['group', 'zOrder', 'source', 'rotation'],
+            });
+        });
     }
 
     static distance(points: number[], x: number, y: number): number {
@@ -2156,7 +2180,7 @@ export class MaskShape extends Shape {
     }
 
     protected validateStateBeforeSave(data: ObjectState, updated: ObjectState['updateFlags'], frame?: number): number[] {
-        Annotation.prototype.validateStateBeforeSave.call(this, data, updated);
+        super.validateStateBeforeSave(data, updated, frame);
         if (updated.points) {
             const { width, height } = this.frameMeta[frame];
             return cropMask(data.points, width, height);
@@ -2165,7 +2189,13 @@ export class MaskShape extends Shape {
         return [];
     }
 
-    public removeUnderlyingPixels(frame: number): void {
+    public removeUnderlyingPixels(frame: number):
+    {
+        clientIDs: number[],
+        undo: Function,
+        redo: Function,
+        emptyMaskOccurred: boolean,
+    } {
         if (frame !== this.frame) {
             throw new ArgumentError(
                 `Wrong "frame" attribute: is not equal to the shape frame (${frame} vs ${this.frame})`,
@@ -2178,7 +2208,7 @@ export class MaskShape extends Shape {
         const height = this.bottom - this.top + 1;
         const updatedObjects: Record<number, MaskShape> = {};
 
-        const masks = {};
+        let masks = {};
         const currentMask = rle2Mask(this.points, width, height);
         for (let i = 0; i < currentMask.length; i++) {
             if (currentMask[i]) {
@@ -2206,10 +2236,43 @@ export class MaskShape extends Shape {
             }
         }
 
+        const wrapper = {
+            stashedPoints: Object.values(updatedObjects).map((object) => object.points),
+            stashedRemoved: Object.values(updatedObjects).map((object) => object.removed),
+        };
+
+        let emptyMaskOccurred = false;
         for (const object of Object.values(updatedObjects)) {
-            object.points = mask2Rle(masks[object.clientID]);
-            object.updated = Date.now();
+            const points = mask2Rle(masks[object.clientID]);
+            if (points.length < 2) {
+                object.removed = true;
+                emptyMaskOccurred = true;
+            } else {
+                object.points = points;
+                object.updated = Date.now();
+            }
         }
+        masks = null;
+
+        const undo = (): void => {
+            const updatedStashedPoints = Object.values(updatedObjects).map((object) => object.points);
+            const updatedStashedRemoved = Object.values(updatedObjects).map((object) => object.removed);
+            for (const [index, object] of Object.values(updatedObjects).entries()) {
+                object.points = wrapper.stashedPoints[index];
+                object.removed = wrapper.stashedRemoved[index];
+                object.updated = Date.now();
+            }
+            wrapper.stashedPoints = updatedStashedPoints;
+            wrapper.stashedRemoved = updatedStashedRemoved;
+        };
+
+        const redo = undo;
+        return {
+            clientIDs: Object.keys(updatedObjects).map((clientID) => +clientID),
+            emptyMaskOccurred,
+            undo,
+            redo,
+        };
     }
 
     protected savePoints(maskPoints: number[], frame: number): void {
@@ -2246,15 +2309,34 @@ export class MaskShape extends Shape {
             this.updated = Date.now();
         };
 
-        this.history.do(
-            HistoryActions.CHANGED_POINTS,
-            undo, redo, [this.clientID], frame,
-        );
-
         redo();
-
-        if (config.removeUnderlyingMaskPixels) {
-            this.removeUnderlyingPixels(frame);
+        if (config.removeUnderlyingMaskPixels.enabled) {
+            const {
+                clientIDs,
+                emptyMaskOccurred,
+                undo: undoWithUnderlyingPixels,
+                redo: redoWithUnderlyingPixels,
+            } = this.removeUnderlyingPixels(frame);
+            if (emptyMaskOccurred) {
+                config.removeUnderlyingMaskPixels?.onEmptyMaskOccurrence();
+            }
+            this.history.do(
+                HistoryActions.CHANGED_POINTS,
+                () => {
+                    undoWithUnderlyingPixels();
+                    undo();
+                },
+                () => {
+                    redoWithUnderlyingPixels();
+                    redo();
+                },
+                [this.clientID, ...clientIDs], frame,
+            );
+        } else {
+            this.history.do(
+                HistoryActions.CHANGED_POINTS,
+                undo, redo, [this.clientID], frame,
+            );
         }
     }
 
@@ -2766,20 +2848,54 @@ export class SkeletonTrack extends Track {
         this.shapeType = ShapeType.SKELETON;
         this.readOnlyFields = ['points', 'label', 'occluded', 'outside'];
         this.pinned = false;
-        this.elements = data.elements.map((element: SerializedTrack['elements'][0]) => (
+
+        const [cx, cy] = data.elements.reduce((acc, element, idx) => {
+            const shape = element.shapes[0];
+            if (!shape || shape.frame !== this.frame) {
+                return acc;
+            }
+
+            const result = [acc[0] + shape.points[0], acc[1] + shape.points[1], acc[2] + 1];
+            if (idx === data.elements.length - 1) {
+                // avoid division by 0, additionally
+                return [result[0] / (result[2] || 1), result[1] / (result[2] || 1)];
+            }
+
+            return result;
+        }, [0, 0, 0]);
+
+        this.elements = this.label.structure.sublabels.map((sublabel) => {
+            const element = data.elements.find((_element) => _element.label_id === sublabel.id);
+            const elementData = element || {
+                label_id: sublabel.id,
+                frame: this.frame,
+                attributes: [],
+                shapes: [{
+                    attributes: [],
+                    points: [cx, cy],
+                    frame: this.frame,
+                    occluded: false,
+                    outside: true,
+                    rotation: 0,
+                    type: sublabel.type as unknown as ShapeType,
+                }],
+            };
+
             /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
-            trackFactory({
-                ...element,
+            return trackFactory({
+                ...elementData,
                 group: this.group,
                 source: this.source,
+                shapes: elementData.shapes.map((shape) => ({
+                    ...shape,
+                    z_order: this.shapes[shape.frame]?.zOrder || 0,
+                })),
             }, injection.nextClientID(), {
                 ...injection,
                 parentID: this.clientID,
                 readOnlyFields: ['group', 'zOrder', 'source', 'rotation'],
-            })
-
-            // todo z_order: this.zOrder,
-        )).sort((a: Annotation, b: Annotation) => a.label.id - b.label.id) as any as Track[];
+            });
+        }).sort((a: Annotation, b: Annotation) => a.label.id - b.label.id);
     }
 
     public updateServerID(body: SerializedTrack): void {
