@@ -222,6 +222,7 @@ function AttributeAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.
         PREVIOUS_OBJECT: keyMap.PREVIOUS_OBJECT,
         SWITCH_LOCK: keyMap.SWITCH_LOCK,
         SWITCH_OCCLUDED: keyMap.SWITCH_OCCLUDED,
+        SWITCH_PINNED: keyMap.SWITCH_PINNED,
         NEXT_KEY_FRAME: keyMap.NEXT_KEY_FRAME,
         PREV_KEY_FRAME: keyMap.PREV_KEY_FRAME,
     };
@@ -257,6 +258,13 @@ function AttributeAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.
                 updateAnnotations([activeObjectState]);
             }
         },
+        SWITCH_PINNED: (event: KeyboardEvent | undefined) => {
+            preventDefault(event);
+            if (activeObjectState) {
+                activeObjectState.pinned = !activeObjectState.pinned;
+                updateAnnotations([activeObjectState]);
+            }
+        },
         NEXT_KEY_FRAME: (event: KeyboardEvent | undefined) => {
             preventDefault(event);
             if (activeObjectState && activeObjectState.objectType === ObjectType.TRACK) {
@@ -284,9 +292,7 @@ function AttributeAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.
             <Layout.Sider {...siderProps}>
                 {/* eslint-disable-next-line */}
                 <span
-                    className={`cvat-objects-sidebar-sider
-                        ant-layout-sider-zero-width-trigger
-                        ant-layout-sider-zero-width-trigger-left`}
+                    className='cvat-objects-sidebar-sider'
                     onClick={collapse}
                 >
                     {sidebarCollapsed ? <MenuFoldOutlined title='Show' /> : <MenuUnfoldOutlined title='Hide' />}
@@ -363,9 +369,7 @@ function AttributeAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.
         <Layout.Sider {...siderProps}>
             {/* eslint-disable-next-line */}
             <span
-                className={`cvat-objects-sidebar-sider
-                    ant-layout-sider-zero-width-trigger
-                    ant-layout-sider-zero-width-trigger-left`}
+                className='cvat-objects-sidebar-sider'
                 onClick={collapse}
             >
                 {sidebarCollapsed ? <MenuFoldOutlined title='Show' /> : <MenuUnfoldOutlined title='Hide' />}

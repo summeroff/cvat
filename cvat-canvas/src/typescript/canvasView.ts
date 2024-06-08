@@ -97,7 +97,7 @@ export class CanvasViewImpl implements CanvasView, Listener {
         return this.controller.mode;
     }
 
-    private onMessage = (messages: CanvasHint[] | null, topic: string) => {
+    private onMessage = (messages: CanvasHint[] | null, topic: string): void => {
         this.canvas.dispatchEvent(
             new CustomEvent('canvas.message', {
                 bubbles: false,
@@ -451,6 +451,7 @@ export class CanvasViewImpl implements CanvasView, Listener {
                     results.forEach((bitmap, idx) => {
                         const [curLeft, curTop] = objects[idx].points.slice(-4, -2);
                         canvas.getContext('2d').drawImage(bitmap, curLeft - left, curTop - top);
+                        bitmap.close();
                     });
 
                     const imageData = canvas.getContext('2d')

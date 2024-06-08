@@ -169,7 +169,6 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                             <Progress
                                 percent={importingState.progress}
                                 strokeColor='#1890FF'
-                                strokeWidth={5}
                                 size='small'
                             />
                         </Col>
@@ -224,7 +223,6 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                             }}
                             strokeColor='#1890FF'
                             showInfo={false}
-                            strokeWidth={5}
                             size='small'
                         />
                         <div>

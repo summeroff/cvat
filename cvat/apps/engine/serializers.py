@@ -22,8 +22,8 @@ from cvat.apps.dataset_manager.formats.utils import get_label_color
 from cvat.apps.engine import models
 from cvat.apps.engine.cloud_provider import get_cloud_storage_instance, Credentials, Status
 from cvat.apps.engine.log import ServerLogManager
+from cvat.apps.engine.permissions import TaskPermission
 from cvat.apps.engine.utils import parse_specific_attributes, build_field_filter_params, get_list_view_name, reverse
-from cvat.apps.iam.permissions import TaskPermission
 
 from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 
@@ -236,6 +236,7 @@ class DelimitedStringListField(serializers.ListField):
         return '\n'.join(super().to_internal_value(data))
 
 class AttributeSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
     values = DelimitedStringListField(allow_empty=True,
         child=serializers.CharField(allow_blank=True, max_length=200),
     )
@@ -325,6 +326,16 @@ class LabelSerializer(SublabelSerializer):
 
         return attrs
 
+    @staticmethod
+    def check_attribute_names_unique(attrs):
+        encountered_names = set()
+        for attribute in attrs:
+            attr_name = attribute.get('name')
+            if attr_name in encountered_names:
+                raise serializers.ValidationError(f"Duplicate attribute with name '{attr_name}' exists")
+            else:
+                encountered_names.add(attr_name)
+
     @classmethod
     @transaction.atomic
     def update_label(
@@ -339,6 +350,8 @@ class LabelSerializer(SublabelSerializer):
         parent_info, logger = cls._get_parent_info(parent_instance)
 
         attributes = validated_data.pop('attributespec_set', [])
+
+        cls.check_attribute_names_unique(attributes)
 
         if validated_data.get('id') is not None:
             try:
@@ -410,9 +423,19 @@ class LabelSerializer(SublabelSerializer):
             raise exceptions.ValidationError(str(exc)) from exc
 
         for attr in attributes:
-            (db_attr, created) = models.AttributeSpec.objects.get_or_create(
-                label=db_label, name=attr['name'], defaults=attr
-            )
+            attr_id = attr.get('id', None)
+            if attr_id is not None:
+                try:
+                    db_attr = models.AttributeSpec.objects.get(id=attr_id, label=db_label)
+                except models.AttributeSpec.DoesNotExist as ex:
+                    raise exceptions.NotFound(
+                        f'Attribute with id #{attr_id} does not exist'
+                    ) from ex
+                created = False
+            else:
+                (db_attr, created) = models.AttributeSpec.objects.get_or_create(
+                    label=db_label, name=attr['name'], defaults=attr
+                )
             if created:
                 logger.info("New {} attribute for {} label was created"
                     .format(db_attr.name, db_label.name))
@@ -421,6 +444,7 @@ class LabelSerializer(SublabelSerializer):
                     .format(db_attr.name, db_label.name))
 
                 # FIXME: need to update only "safe" fields
+                db_attr.name = attr.get('name', db_attr.name)
                 db_attr.default_value = attr.get('default_value', db_attr.default_value)
                 db_attr.mutable = attr.get('mutable', db_attr.mutable)
                 db_attr.input_type = attr.get('input_type', db_attr.input_type)
@@ -443,6 +467,8 @@ class LabelSerializer(SublabelSerializer):
 
         for label in labels:
             attributes = label.pop('attributespec_set')
+
+            cls.check_attribute_names_unique(attributes)
 
             if label.get('id', None):
                 del label['id']
@@ -727,19 +753,19 @@ class JobWriteSerializer(WriteOnceMixin, serializers.ModelSerializer):
         return job
 
     def update(self, instance, validated_data):
-        state = validated_data.get('state')
-        stage = validated_data.get('stage')
-        if stage:
-            if stage == models.StageChoice.ANNOTATION:
-                status = models.StatusChoice.ANNOTATION
-            elif stage == models.StageChoice.ACCEPTANCE and state == models.StateChoice.COMPLETED:
-                status = models.StatusChoice.COMPLETED
-            else:
-                status = models.StatusChoice.VALIDATION
+        stage = validated_data.get('stage', instance.stage)
+        state = validated_data.get('state', models.StateChoice.NEW if stage != instance.stage else instance.state)
 
-            validated_data['status'] = status
-            if stage != instance.stage and not state:
-                validated_data['state'] = models.StateChoice.NEW
+        if 'stage' in validated_data or 'state' in validated_data:
+            if stage == models.StageChoice.ANNOTATION:
+                validated_data['status'] = models.StatusChoice.ANNOTATION
+            elif stage == models.StageChoice.ACCEPTANCE and state == models.StateChoice.COMPLETED:
+                validated_data['status'] = models.StatusChoice.COMPLETED
+            else:
+                validated_data['status'] = models.StatusChoice.VALIDATION
+
+        if state != instance.state:
+            validated_data['state'] = state
 
         assignee = validated_data.get('assignee')
         if assignee is not None:
@@ -1201,7 +1227,8 @@ class TaskWriteSerializer(WriteOnceMixin, serializers.ModelSerializer):
                     for (model, model_name) in (
                         (models.LabeledTrackAttributeVal, 'track'),
                         (models.LabeledShapeAttributeVal, 'shape'),
-                        (models.LabeledImageAttributeVal, 'image')
+                        (models.LabeledImageAttributeVal, 'image'),
+                        (models.TrackedShapeAttributeVal, 'shape__track')
                     ):
                         model.objects.filter(**{
                             f'{model_name}__job__segment__task': instance,
