@@ -190,6 +190,13 @@ allow if {
 }
 
 allow if {
+    input.scope in { utils.VIEW }
+    input.auth.organization.id == input.resource.organization.id
+    utils.has_perm(utils.USER)
+    organizations.has_perm(organizations.WORKER)
+}
+
+allow if {
     input.scope in {
         utils.VIEW, utils.VIEW_ANNOTATIONS, utils.EXPORT_DATASET, utils.VIEW_METADATA,
         utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP

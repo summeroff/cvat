@@ -89,6 +89,11 @@ filter := [] if { # Django Q object to filter list of entries
     utils.is_admin
     utils.is_organization
     qobject := [ {"organization": input.auth.organization.id} ]
+} else = qobject {
+    utils.is_organization
+    utils.has_perm(utils.USER)
+    organizations.has_perm(organizations.WORKER)
+    qobject := [ {"organization": input.auth.organization.id} ]
 } else := qobject if {
     utils.is_sandbox
     user := input.auth.user
@@ -109,6 +114,13 @@ allow if {
     input.scope == utils.VIEW
     utils.is_sandbox
     is_project_staff
+}
+
+allow {
+    input.scope == utils.VIEW
+    input.auth.organization.id == input.resource.organization.id
+    utils.has_perm(utils.USER)
+    organizations.has_perm(organizations.WORKER)
 }
 
 allow if {
