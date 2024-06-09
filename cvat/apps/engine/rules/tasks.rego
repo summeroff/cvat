@@ -160,6 +160,12 @@ filter := [] if { # Django Q object to filter list of entries
     utils.is_organization
     qobject := [ {"organization": input.auth.organization.id},
         {"project__organization": input.auth.organization.id}, "|"]
+} else = qobject if {
+    utils.is_organization
+    utils.has_perm(utils.USER)
+    organizations.has_perm(organizations.WORKER)
+    qobject := [ {"organization": input.auth.organization.id},
+        {"project__organization": input.auth.organization.id}, "|"]
 } else := qobject if {
     utils.is_sandbox
     user := input.auth.user
