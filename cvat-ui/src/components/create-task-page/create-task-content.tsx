@@ -761,6 +761,7 @@ class CreateTaskContent extends React.PureComponent<Props & RouteComponentProps,
                     <Col span={24}>
                         <ProjectSubsetField
                             value={subset}
+                            projectSubsets={null}
                             onChange={this.handleTaskSubsetChange}
                             projectId={projectId}
                         />
