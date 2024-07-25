@@ -424,8 +424,7 @@ function JobItem(props: Props): JSX.Element {
                                         value={job.assignee}
                                         onSelect={(user: User | null): void => {
                                             if (job?.assignee?.id === user?.id) return;
-                                            job.assignee = user;
-                                            onJobUpdate(job);
+                                            onJobUpdate(job, { assignee: user });
                                         }}
                                     />
                                 </Row>
@@ -447,8 +446,7 @@ function JobItem(props: Props): JSX.Element {
                                         className='cvat-job-item-stage'
                                         value={stage}
                                         onChange={(newValue: JobStage) => {
-                                            job.stage = newValue;
-                                            onJobUpdate(job);
+                                            onJobUpdate(job, { stage: newValue });
                                         }}
                                     >
                                         <Select.Option value={JobStage.ANNOTATION}>

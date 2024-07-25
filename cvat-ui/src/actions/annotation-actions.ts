@@ -12,7 +12,7 @@ import {
 } from 'cvat-canvas-wrapper';
 import {
     getCore, MLModel, JobType, Job,
-    QualityConflict, ObjectState, JobState,
+    QualityConflict, ObjectState, JobState, JobStage,
 } from 'cvat-core-wrapper';
 import logger, { EventScope } from 'cvat-logger';
 import { getCVATStore } from 'cvat-store';
@@ -1005,6 +1005,7 @@ export function getJobAsync({
 export function updateCurrentJobAsync(
     jobFieldsToUpdate: {
         state?: JobState;
+        stage?: JobStage;
     },
 ): ThunkAction {
     return async (dispatch: ThunkDispatch) => {
@@ -1074,8 +1075,8 @@ export function finishCurrentJobAsync(): ThunkAction {
             await callback();
         }
 
-        if (jobInstance.state !== JobState.COMPLETED) {
-            await dispatch(updateCurrentJobAsync({ state: JobState.COMPLETED }));
+        if (jobInstance.state !== JobState.COMPLETED || jobInstance.stage !== JobStage.ACCEPTANCE) {
+            await dispatch(updateCurrentJobAsync({ state: JobState.COMPLETED, stage: JobStage.ACCEPTANCE }));
         }
     };
 }
