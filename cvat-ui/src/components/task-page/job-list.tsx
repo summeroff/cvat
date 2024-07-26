@@ -33,7 +33,7 @@ const FilteringComponent = ResourceFilterHOC(
 
 interface Props {
     task: Task;
-    onUpdateJob(job: Job, data: Parameters<Job['save']>[0]): void;
+    onJobUpdate(job: Job, data: Parameters<Job['save']>[0]): void;
 }
 
 const PAGE_SIZE = 10;
@@ -67,7 +67,7 @@ function setUpJobsList(jobs: Job[], query: JobsQuery): Job[] {
 }
 
 function JobListComponent(props: Props): JSX.Element {
-    const { task: taskInstance, onUpdateJob } = props;
+    const { task: taskInstance, onJobUpdate } = props;
     const [visibility, setVisibility] = useState(defaultVisibility);
 
     const history = useHistory();
@@ -93,9 +93,7 @@ function JobListComponent(props: Props): JSX.Element {
         const core = getCore();
         for (const job of taskInstance.jobs) {
             if (job.state !== core.enums.JobState.NEW || job.stage !== JobStage.ANNOTATION) {
-                job.state = core.enums.JobState.NEW;
-                job.stage = JobStage.ANNOTATION;
-                onUpdateJob(job);
+                onJobUpdate(job, {state: core.enums.JobState.NEW, stage: JobStage.ANNOTATION});
             }
         }
     };
@@ -108,7 +106,7 @@ function JobListComponent(props: Props): JSX.Element {
     const filteredJobs = setUpJobsList(jobs, query);
     const jobViews = filteredJobs
         .slice((query.page - 1) * PAGE_SIZE, query.page * PAGE_SIZE)
-        .map((job: Job) => <JobItem key={job.id} job={job} task={taskInstance} onJobUpdate={onUpdateJob} jobDataArray={jobDataArray} addObject={addObject}/>);
+        .map((job: Job) => <JobItem key={job.id} job={job} task={taskInstance} onJobUpdate={onJobUpdate} jobDataArray={jobDataArray} addObject={addObject}/>);
     useEffect(() => {
         history.replace({
             search: updateHistoryFromQuery(query),
