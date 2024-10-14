@@ -8,10 +8,10 @@ import { Canvas, RectDrawingMethod, CuboidDrawingMethod } from 'cvat-canvas-wrap
 import {
     Webhook, MLModel, Organization, Job, Task, Project, Label, User,
     QualityConflict, FramesMetaData, RQStatus, Event, Invitation, SerializedAPISchema,
-    Request,
+    Request, TargetMetric,
 } from 'cvat-core-wrapper';
 import { IntelligentScissors } from 'utils/opencv-wrapper/intelligent-scissors';
-import { KeyMap } from 'utils/mousetrap-react';
+import { KeyMap, KeyMapItem } from 'utils/mousetrap-react';
 import { OpenCVTracker } from 'utils/opencv-wrapper/opencv-interfaces';
 import { ImageFilter } from 'utils/image-processing';
 
@@ -260,6 +260,28 @@ export interface PluginsState {
             };
         };
     };
+    overridableComponents: {
+        annotationPage: {
+            header: {
+                saveAnnotationButton: (() => JSX.Element)[];
+            };
+        };
+        qualityControlPage: {
+            overviewTab: ((props: {
+                task: Task;
+                targetMetric: TargetMetric;
+            }) => JSX.Element)[];
+
+            allocationTable: ((
+                props: {
+                    task: Task;
+                    gtJob: Job;
+                    gtJobMeta: FramesMetaData;
+                    onDeleteFrames: (frames: number[]) => void;
+                    onRestoreFrames: (frames: number[]) => void;
+                }) => JSX.Element)[];
+        };
+    },
     components: {
         header: {
             userMenu: {
@@ -296,11 +318,6 @@ export interface PluginsState {
         projectItem: {
             ribbon: PluginComponent[];
         };
-        annotationPage: {
-            header: {
-                player: PluginComponent[];
-            };
-        };
         settings: {
             player: PluginComponent[];
         };
@@ -310,7 +327,6 @@ export interface PluginsState {
             };
         };
         router: PluginComponent[];
-        loggedInModals: PluginComponent[];
     }
 }
 
@@ -737,6 +753,7 @@ export interface AnnotationState {
     };
     drawing: {
         activeInteractor?: MLModel | OpenCVTool;
+        activeInteractorParameters?: MLModel['params']['canvas'];
         activeShapeType: ShapeType;
         activeRectDrawingMethod?: RectDrawingMethod;
         activeCuboidDrawingMethod?: CuboidDrawingMethod;
@@ -878,6 +895,7 @@ export interface ShortcutsState {
     visibleShortcutsHelp: boolean;
     keyMap: KeyMap;
     normalizedKeyMap: Record<string, string>;
+    defaultState: Record<string, KeyMapItem>
 }
 
 export enum StorageLocation {
@@ -891,11 +909,19 @@ export enum ReviewStatus {
     REVIEW_FURTHER = 'review_further',
 }
 
+export enum NewIssueSource {
+    ISSUE_TOOL = 'tool',
+    QUICK_ISSUE = 'quick_issue',
+}
+
 export interface ReviewState {
     issues: any[];
     frameIssues: any[];
     latestComments: string[];
-    newIssuePosition: number[] | null;
+    newIssue: {
+        position: number[] | null;
+        source: NewIssueSource | null;
+    }
     issuesHidden: boolean;
     issuesResolvedHidden: boolean;
     conflicts: QualityConflict[];
@@ -957,6 +983,10 @@ export interface RequestsState {
     query: RequestsQuery;
 }
 
+export interface NavigationState {
+    prevLocation: string | null;
+}
+
 export interface CombinedState {
     auth: AuthState;
     projects: ProjectsState;
@@ -980,6 +1010,7 @@ export interface CombinedState {
     webhooks: WebhooksState;
     requests: RequestsState;
     serverAPI: ServerAPIState;
+    navigation: NavigationState;
 }
 
 export interface Indexable {

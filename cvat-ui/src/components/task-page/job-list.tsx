@@ -1,12 +1,11 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2023 CVAT.ai Corporation
+// Copyright (C) 2023-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import React, { useCallback, useEffect, useState } from 'react';
 import jsonLogic from 'json-logic-js';
 import _ from 'lodash';
-import copy from 'copy-to-clipboard';
 import { Indexable, JobsQuery } from 'reducers';
 import { useHistory } from 'react-router';
 import { Row, Col } from 'antd/lib/grid';
@@ -14,12 +13,13 @@ import Text from 'antd/lib/typography/Text';
 import Pagination from 'antd/lib/pagination';
 import { JobStage } from 'cvat-core/src/enums';
 import Empty from 'antd/lib/empty';
+import copy from 'copy-to-clipboard';
 import Button from 'antd/lib/button';
-import { CopyOutlined, PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
+import CVATTooltip from 'components/common/cvat-tooltip';
 import { Task, Job, getCore } from 'cvat-core-wrapper';
 import JobItem from 'components/job-item/job-item';
 import { LabelObjects, JobData } from 'components/job-item/job-item';
-import CVATTooltip from 'components/common/cvat-tooltip';
 import {
     SortingComponent, ResourceFilterHOC, defaultVisibility, updateHistoryFromQuery,
 } from 'components/resource-sorting-filtering';

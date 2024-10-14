@@ -274,6 +274,9 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
         const onViewAnalytics = (): void => {
             history.push(`/tasks/${taskInstance.id}/analytics`);
         };
+        const onViewQualityControl = (): void => {
+            history.push(`/tasks/${taskInstance.id}/quality-control`);
+        };
 
         return (
             <Col span={3}>
@@ -303,6 +306,7 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                             <ActionsMenuContainer
                                 taskInstance={taskInstance}
                                 onViewAnalytics={onViewAnalytics}
+                                onViewQualityControl={onViewQualityControl}
                             />
                         )}
                     >

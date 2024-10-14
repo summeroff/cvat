@@ -468,21 +468,23 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
             const { payload } = action;
 
             let { activeControl } = state.canvas;
-            if ('activeObjectType' in payload && payload.activeObjectType === ObjectType.TAG) {
-                activeControl = ActiveControl.CURSOR;
-            } else if ('activeShapeType' in payload) {
-                const controlMapping = {
-                    [ShapeType.RECTANGLE]: ActiveControl.DRAW_RECTANGLE,
-                    [ShapeType.POLYGON]: ActiveControl.DRAW_POLYGON,
-                    [ShapeType.POLYLINE]: ActiveControl.DRAW_POLYLINE,
-                    [ShapeType.POINTS]: ActiveControl.DRAW_POINTS,
-                    [ShapeType.ELLIPSE]: ActiveControl.DRAW_ELLIPSE,
-                    [ShapeType.CUBOID]: ActiveControl.DRAW_CUBOID,
-                    [ShapeType.SKELETON]: ActiveControl.DRAW_SKELETON,
-                    [ShapeType.MASK]: ActiveControl.DRAW_MASK,
-                };
+            if (payload.updateCurrentControl) {
+                if ('activeObjectType' in payload && payload.activeObjectType === ObjectType.TAG) {
+                    activeControl = ActiveControl.CURSOR;
+                } else if ('activeShapeType' in payload) {
+                    const controlMapping = {
+                        [ShapeType.RECTANGLE]: ActiveControl.DRAW_RECTANGLE,
+                        [ShapeType.POLYGON]: ActiveControl.DRAW_POLYGON,
+                        [ShapeType.POLYLINE]: ActiveControl.DRAW_POLYLINE,
+                        [ShapeType.POINTS]: ActiveControl.DRAW_POINTS,
+                        [ShapeType.ELLIPSE]: ActiveControl.DRAW_ELLIPSE,
+                        [ShapeType.CUBOID]: ActiveControl.DRAW_CUBOID,
+                        [ShapeType.SKELETON]: ActiveControl.DRAW_SKELETON,
+                        [ShapeType.MASK]: ActiveControl.DRAW_MASK,
+                    };
 
-                activeControl = controlMapping[payload.activeShapeType as ShapeType];
+                    activeControl = controlMapping[payload.activeShapeType as ShapeType];
+                }
             }
 
             return {
@@ -496,9 +498,8 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
                     activeControl,
                 },
                 drawing: {
-                    ...state.drawing,
+                    ...defaultState.drawing,
                     ...payload,
-                    activeInteractor: undefined,
                 },
             };
         }
@@ -587,15 +588,17 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
         }
         case AnnotationActionTypes.ACTIVATE_OBJECT: {
             const { activatedStateID, activatedElementID, activatedAttributeID } = action.payload;
-
             const {
                 canvas: { activeControl, instance },
-                annotations: { highlightedConflict },
+                annotations: { highlightedConflict, states },
             } = state;
 
-            if (activeControl !== ActiveControl.CURSOR ||
-                (instance as Canvas | Canvas3d).mode() !== CanvasMode.IDLE ||
-                highlightedConflict) {
+            const objectDoesNotExist = activatedStateID !== null &&
+                !states.some((_state) => _state.clientID === activatedStateID);
+            const canvasIsNotReady = (instance as Canvas | Canvas3d)
+                .mode() !== CanvasMode.IDLE || activeControl !== ActiveControl.CURSOR;
+
+            if (objectDoesNotExist || canvasIsNotReady || highlightedConflict) {
                 return state;
             }
 
@@ -931,7 +934,7 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
             };
         }
         case AnnotationActionTypes.INTERACT_WITH_CANVAS: {
-            const { activeInteractor, activeLabelID } = action.payload;
+            const { activeInteractor, activeLabelID, activeInteractorParameters } = action.payload;
             return {
                 ...state,
                 annotations: {
@@ -941,6 +944,7 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
                 drawing: {
                     ...state.drawing,
                     activeInteractor,
+                    activeInteractorParameters,
                     activeLabelID,
                 },
                 canvas: {
@@ -1008,55 +1012,18 @@ export default (state = defaultState, action: AnyAction): AnnotationState => {
                 },
             };
         }
-        case AnnotationActionTypes.DELETE_FRAME:
-        case AnnotationActionTypes.RESTORE_FRAME: {
-            return {
-                ...state,
-                player: {
-                    ...state.player,
-                    frame: {
-                        ...state.player.frame,
-                        fetching: true,
-                    },
-                },
-                canvas: {
-                    ...state.canvas,
-                    ready: false,
-                },
-            };
-        }
-        case AnnotationActionTypes.DELETE_FRAME_FAILED:
-        case AnnotationActionTypes.RESTORE_FRAME_FAILED: {
-            return {
-                ...state,
-                player: {
-                    ...state.player,
-                    frame: {
-                        ...state.player.frame,
-                        fetching: false,
-                    },
-                },
-                canvas: {
-                    ...state.canvas,
-                    ready: true,
-                },
-            };
-        }
         case AnnotationActionTypes.DELETE_FRAME_SUCCESS:
         case AnnotationActionTypes.RESTORE_FRAME_SUCCESS: {
+            const { data } = action.payload;
+
             return {
                 ...state,
                 player: {
                     ...state.player,
                     frame: {
                         ...state.player.frame,
-                        data: action.payload.data,
-                        fetching: false,
+                        data,
                     },
-                },
-                canvas: {
-                    ...state.canvas,
-                    ready: true,
                 },
             };
         }
