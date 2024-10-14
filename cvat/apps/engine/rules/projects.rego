@@ -7,7 +7,7 @@ import data.organizations
 
 # input: {
 #     "scope": <"create"|"list"|"update:desc"|"update:owner"|"update:assignee"|
-#               "view"|"delete"|"export:dataset"|"export:annotations"|
+#               "update:associated_storage"|"view"|"delete"|"export:dataset"|"export:annotations"|
 #               "import:dataset"> or null,
 #     "auth": {
 #         "user": {
@@ -139,14 +139,14 @@ allow if {
 
 
 allow if {
-    input.scope in {utils.DELETE, utils.UPDATE_ORG}
+    input.scope in {utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE}
     utils.is_sandbox
     utils.has_perm(utils.WORKER)
     utils.is_resource_owner
 }
 
 allow if {
-    input.scope in {utils.DELETE, utils.UPDATE_ORG}
+    input.scope in {utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE}
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.WORKER)
     organizations.is_member
@@ -154,7 +154,7 @@ allow if {
 }
 
 allow if {
-    input.scope in {utils.DELETE, utils.UPDATE_ORG}
+    input.scope in {utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE}
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.USER)
     organizations.is_staff

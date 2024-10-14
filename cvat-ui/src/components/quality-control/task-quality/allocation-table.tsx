@@ -2,8 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 
+import { range } from 'lodash';
 import React, { useState } from 'react';
 import { useHistory } from 'react-router';
+import { useSelector } from 'react-redux';
+import { CombinedState } from 'reducers';
 import { Row, Col } from 'antd/lib/grid';
 import Table from 'antd/lib/table';
 import Button from 'antd/lib/button';
@@ -15,8 +18,6 @@ import { RestoreIcon } from 'icons';
 import { Task, Job, FramesMetaData } from 'cvat-core-wrapper';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import { sorter } from 'utils/quality';
-import { useSelector } from 'react-redux';
-import { CombinedState } from 'reducers';
 
 interface Props {
     task: Task;
@@ -32,6 +33,58 @@ interface RowData {
     active: boolean;
 }
 
+interface TableRowData extends RowData {
+    key: Key;
+}
+
+// Temporary solution: this function is necessary in one of plugins which imports it directly from CVAT code
+// Further this solution should be re-designed
+// Until then, *DO NOT RENAME/REMOVE* this exported function
+export function getAllocationTableContents(gtJobMeta: FramesMetaData, gtJob: Job): TableRowData[] {
+    // A workaround for meta "includedFrames" using source data numbers
+    // TODO: remove once meta is migrated to relative frame numbers
+
+    function getDataStartFrame(meta: FramesMetaData, localStartFrame: number): number {
+        return meta.startFrame - localStartFrame * meta.frameStep;
+    }
+
+    function getFrameNumber(dataFrameNumber: number, dataStartFrame: number, step: number): number {
+        return (dataFrameNumber - dataStartFrame) / step;
+    }
+
+    const dataStartFrame = getDataStartFrame(gtJobMeta, gtJob.startFrame);
+    const jobFrameNumbers = gtJobMeta.getDataFrameNumbers().map((dataFrameID: number) => (
+        getFrameNumber(dataFrameID, dataStartFrame, gtJobMeta.frameStep)
+    ));
+
+    const jobDataSegmentFrameNumbers = range(
+        gtJobMeta.startFrame, gtJobMeta.stopFrame + 1, gtJobMeta.frameStep,
+    );
+
+    let includedIndex = 0;
+    const result: TableRowData[] = [];
+    for (let index = 0; index < jobDataSegmentFrameNumbers.length; ++index) {
+        const dataFrameID = jobDataSegmentFrameNumbers[index];
+
+        if (gtJobMeta.includedFrames && !gtJobMeta.includedFrames.includes(dataFrameID)) {
+            continue;
+        }
+
+        const frameID = jobFrameNumbers[includedIndex];
+
+        result.push({
+            key: frameID,
+            frame: frameID,
+            name: gtJobMeta.frames[index]?.name ?? gtJobMeta.frames[0].name,
+            active: !(frameID in gtJobMeta.deletedFrames),
+        });
+
+        ++includedIndex;
+    }
+
+    return result;
+}
+
 function AllocationTable(props: Readonly<Props>): JSX.Element {
     const {
         task, gtJob, gtJobMeta,
@@ -44,12 +97,7 @@ function AllocationTable(props: Readonly<Props>): JSX.Element {
         selectedRows: [],
     });
 
-    const data = gtJobMeta.includedFrames.map((frameID: number) => ({
-        key: frameID,
-        frame: frameID,
-        name: gtJobMeta.frames[frameID]?.name ?? gtJobMeta.frames[0].name,
-        active: !(frameID in gtJobMeta.deletedFrames),
-    }));
+    const data = getAllocationTableContents(gtJobMeta, gtJob);
 
     const columns = [
         {
@@ -109,10 +157,12 @@ function AllocationTable(props: Readonly<Props>): JSX.Element {
             render: (active: boolean, record: RowData): JSX.Element => (
                 active ? (
                     <DeleteOutlined
+                        className='cvat-allocation-frame-delete'
                         onClick={() => { onDeleteFrames([record.frame]); }}
                     />
                 ) : (
                     <Icon
+                        className='cvat-allocation-frame-restore'
                         onClick={() => { onRestoreFrames([record.frame]); }}
                         component={RestoreIcon}
                     />
@@ -130,7 +180,7 @@ function AllocationTable(props: Readonly<Props>): JSX.Element {
                 {
                     selection.selectedRowKeys.length !== 0 ? (
                         <>
-                            <Col>
+                            <Col className='cvat-allocation-selection-frame-delete'>
                                 <DeleteOutlined
                                     onClick={() => {
                                         const framesToUpdate = selection.selectedRows
@@ -141,7 +191,7 @@ function AllocationTable(props: Readonly<Props>): JSX.Element {
                                     }}
                                 />
                             </Col>
-                            <Col>
+                            <Col className='cvat-allocation-selection-frame-restore'>
                                 <Icon
                                     onClick={() => {
                                         const framesToUpdate = selection.selectedRows
@@ -163,7 +213,7 @@ function AllocationTable(props: Readonly<Props>): JSX.Element {
                     if (!rowData.active) {
                         return 'cvat-allocation-frame-row cvat-allocation-frame-row-excluded';
                     }
-                    return 'cvat-allocation-frame';
+                    return 'cvat-allocation-frame-row';
                 }}
                 columns={columns}
                 dataSource={data}

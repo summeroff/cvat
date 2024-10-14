@@ -28,6 +28,7 @@ import { Request } from './request';
 import logger from './logger';
 import Issue from './issue';
 import ObjectState from './object-state';
+import ValidationLayout from './validation-layout';
 
 function buildDuplicatedAPI(prototype) {
     Object.defineProperties(prototype, {
@@ -233,6 +234,10 @@ function buildDuplicatedAPI(prototype) {
                     const result = await PluginRegistry.apiWrapper.call(this, prototype.frames.cachedChunks);
                     return result;
                 },
+                async frameNumbers() {
+                    const result = await PluginRegistry.apiWrapper.call(this, prototype.frames.frameNumbers);
+                    return result;
+                },
                 async preview() {
                     const result = await PluginRegistry.apiWrapper.call(this, prototype.frames.preview);
                     return result;
@@ -255,11 +260,11 @@ function buildDuplicatedAPI(prototype) {
                     );
                     return result;
                 },
-                async chunk(chunkNumber, quality) {
+                async chunk(chunkIndex, quality) {
                     const result = await PluginRegistry.apiWrapper.call(
                         this,
                         prototype.frames.chunk,
-                        chunkNumber,
+                        chunkIndex,
                         quality,
                     );
                     return result;
@@ -380,6 +385,7 @@ export class Session {
         restore: (frame: number) => Promise<void>;
         save: () => Promise<FramesMetaData[]>;
         cachedChunks: () => Promise<number[]>;
+        frameNumbers: () => Promise<number[]>;
         preview: () => Promise<string>;
         contextImage: (frame: number) => Promise<Record<string, ImageBitmap>>;
         search: (
@@ -443,6 +449,7 @@ export class Session {
             restore: Object.getPrototypeOf(this).frames.restore.bind(this),
             save: Object.getPrototypeOf(this).frames.save.bind(this),
             cachedChunks: Object.getPrototypeOf(this).frames.cachedChunks.bind(this),
+            frameNumbers: Object.getPrototypeOf(this).frames.frameNumbers.bind(this),
             preview: Object.getPrototypeOf(this).frames.preview.bind(this),
             search: Object.getPrototypeOf(this).frames.search.bind(this),
             contextImage: Object.getPrototypeOf(this).frames.contextImage.bind(this),
@@ -684,6 +691,11 @@ export class Job extends Session {
         return result;
     }
 
+    async validationLayout(): Promise<ValidationLayout | null> {
+        const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.validationLayout);
+        return result;
+    }
+
     async openIssue(issue: Issue, message: string): Promise<Issue> {
         const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.openIssue, issue, message);
         return result;
@@ -737,9 +749,9 @@ export class Task extends Session {
     public readonly cloudStorageId: number;
     public readonly sortingMethod: string;
 
-    public readonly validationMethod: string;
+    public readonly validationMode: string | null;
     public readonly validationFramesPercent: number;
-    public readonly validationFramesPerJob: number;
+    public readonly validationFramesPerJobPercent: number;
     public readonly frameSelectionMethod: string;
 
     constructor(initialData: Readonly<Omit<SerializedTask, 'labels' | 'jobs'> & {
@@ -787,6 +799,8 @@ export class Task extends Session {
             cloud_storage_id: undefined,
             sorting_method: undefined,
             files: undefined,
+
+            validation_mode: null,
         };
 
         const updateTrigger = new FieldUpdateTrigger();
@@ -868,10 +882,10 @@ export class Task extends Session {
         }
 
         data.state_progress = {
-            finished: initialData?.jobs?.validation || 0,
-            inprogress:  initialData?.jobs?.inprogress || 0,
-            rejected:  initialData?.jobs?.rejected || 0,
-            fresh:  initialData?.jobs?.fresh || 0,
+            finished: initialData?.progress?.validation || 0,
+            inprogress:  initialData?.progress?.inprogress || 0,
+            rejected:  initialData?.progress?.rejected || 0,
+            fresh:  initialData?.progress?.fresh || 0,
         };
 
         Object.defineProperties(
@@ -1124,6 +1138,9 @@ export class Task extends Session {
                 state_progress: {
                     get: () => data.state_progress,
                 },
+                validationMode: {
+                    get: () => data.validation_mode,
+                },
                 _internalData: {
                     get: () => data,
                 },
@@ -1183,6 +1200,11 @@ export class Task extends Session {
 
     async guide(): Promise<AnnotationGuide | null> {
         const result = await PluginRegistry.apiWrapper.call(this, Task.prototype.guide);
+        return result;
+    }
+
+    async validationLayout(): Promise<ValidationLayout | null> {
+        const result = await PluginRegistry.apiWrapper.call(this, Task.prototype.validationLayout);
         return result;
     }
 }

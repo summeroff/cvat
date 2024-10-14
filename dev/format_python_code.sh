@@ -25,6 +25,11 @@ for paths in \
     "cvat/apps/analytics_report" \
     "cvat/apps/engine/lazy_list.py" \
     "cvat/apps/engine/background.py" \
+    "cvat/apps/engine/frame_provider.py" \
+    "cvat/apps/engine/cache.py" \
+    "cvat/apps/engine/default_settings.py" \
+    "cvat/apps/engine/field_validation.py" \
+    "cvat/apps/engine/model_utils.py" \
     ; do
     ${BLACK} -- ${paths}
     ${ISORT} -- ${paths}

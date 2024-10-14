@@ -7,8 +7,8 @@ import data.organizations
 
 # input: {
 #     "scope": <"create"|"create@project"|"view"|"list"|"update:desc"|
-#         "update:owner"|"update:assignee"|"update:project"|"delete"|
-#         "view:annotations"|"update:annotations"|"delete:annotations"|
+#         "update:owner"|"update:assignee"|"update:project"|"update:associated_storage"|
+#         "delete"|"view:annotations"|"update:annotations"|"delete:annotations"|
 #         "export:dataset"|"view:data"|"upload:data"|"export:annotations"> or null,
 #     "auth": {
 #         "user": {
@@ -189,7 +189,8 @@ filter := [] if { # Django Q object to filter list of entries
 allow if {
     input.scope in {
         utils.VIEW, utils.VIEW_ANNOTATIONS, utils.EXPORT_DATASET, utils.VIEW_METADATA,
-        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP
+        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP,
+        utils.VIEW_VALIDATION_LAYOUT
     }
     utils.is_sandbox
     is_task_staff
@@ -205,7 +206,8 @@ allow if {
 allow if {
     input.scope in {
         utils.VIEW, utils.VIEW_ANNOTATIONS, utils.EXPORT_DATASET, utils.VIEW_METADATA,
-        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP
+        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP,
+        utils.VIEW_VALIDATION_LAYOUT
     }
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.USER)
@@ -215,7 +217,8 @@ allow if {
 allow if {
     input.scope in {
         utils.VIEW, utils.VIEW_ANNOTATIONS, utils.EXPORT_DATASET, utils.VIEW_METADATA,
-        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP
+        utils.VIEW_DATA, utils.EXPORT_ANNOTATIONS, utils.EXPORT_BACKUP,
+        utils.VIEW_VALIDATION_LAYOUT
     }
     input.auth.organization.id == input.resource.organization.id
     organizations.has_perm(organizations.WORKER)
@@ -225,7 +228,8 @@ allow if {
 allow if {
     input.scope in {
         utils.UPDATE_DESC, utils.UPDATE_ANNOTATIONS, utils.DELETE_ANNOTATIONS,
-        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS
+        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS,
+        utils.UPDATE_VALIDATION_LAYOUT
     }
     utils.is_sandbox
     is_task_staff
@@ -235,7 +239,8 @@ allow if {
 allow if {
     input.scope in {
         utils.UPDATE_DESC, utils.UPDATE_ANNOTATIONS, utils.DELETE_ANNOTATIONS,
-        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS
+        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS,
+        utils.UPDATE_VALIDATION_LAYOUT
     }
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.USER)
@@ -245,7 +250,8 @@ allow if {
 allow if {
     input.scope in {
         utils.UPDATE_DESC, utils.UPDATE_ANNOTATIONS, utils.DELETE_ANNOTATIONS,
-        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS
+        utils.UPLOAD_DATA, utils.UPDATE_METADATA, utils.IMPORT_ANNOTATIONS,
+        utils.UPDATE_VALIDATION_LAYOUT
     }
     is_task_staff
     input.auth.organization.id == input.resource.organization.id
@@ -264,9 +270,16 @@ allow if {
 }
 
 allow if {
+    input.scope == utils.UPDATE_ASSOCIATED_STORAGE
+    utils.is_sandbox
+    is_project_owner
+    utils.has_perm(utils.WORKER)
+}
+
+allow if {
     input.scope in {
         utils.UPDATE_OWNER, utils.UPDATE_ASSIGNEE, utils.UPDATE_PROJECT,
-        utils.DELETE, utils.UPDATE_ORG
+        utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE
     }
     utils.is_sandbox
     is_task_owner
@@ -276,7 +289,7 @@ allow if {
 allow if {
     input.scope in {
         utils.UPDATE_OWNER, utils.UPDATE_ASSIGNEE, utils.UPDATE_PROJECT,
-        utils.DELETE, utils.UPDATE_ORG
+        utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE
     }
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.USER)
@@ -286,12 +299,19 @@ allow if {
 allow if {
     input.scope in {
         utils.UPDATE_OWNER, utils.UPDATE_ASSIGNEE, utils.UPDATE_PROJECT,
-        utils.DELETE, utils.UPDATE_ORG
+        utils.DELETE, utils.UPDATE_ORG, utils.UPDATE_ASSOCIATED_STORAGE
     }
     input.auth.organization.id == input.resource.organization.id
     utils.has_perm(utils.WORKER)
     organizations.has_perm(organizations.WORKER)
     is_task_owner
+}
+allow if {
+    input.scope == utils.UPDATE_ASSOCIATED_STORAGE
+    input.auth.organization.id == input.resource.organization.id
+    utils.has_perm(utils.WORKER)
+    organizations.has_perm(organizations.WORKER)
+    is_project_owner
 }
 
 allow if {
@@ -304,4 +324,3 @@ allow if {
     organizations.has_perm(organizations.WORKER)
     is_project_staff
 }
-

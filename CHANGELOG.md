@@ -16,6 +16,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-2.21.0'></a>
+## \[2.21.0\] - 2024-10-10
+
+### Added
+
+- New task mode: Honeypots (GT pool)
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+- New task creation options for quality control: Honeypots (GT pool), GT job
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+- New GT job frame selection method: `random_per_job`,
+  which guarantees each job will have GT overlap
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+- \[Server API\] POST `/jobs/`: new frame selection parameters,
+  which accept percentages, instead of absolute values
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+- \[Server API\] GET `/api/tasks/{id}/` got a new `validation_mode` field,
+  reflecting the current validation configuration (immutable)
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+- \[Server API\] POST `/api/tasks/{id}/data` got a new `validation_params` field,
+  which allows to enable `GT` and `GT_POOL` validation for a task on its creation
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+
+- Added custom certificates documentation
+  (<https://github.com/cvat-ai/cvat/pull/7508>)
+
+- Support for YOLOv8 Classification format
+  (<https://github.com/cvat-ai/cvat/pull/8475>)
+
+- \[Server API\] An option to change real frames for honeypot frames in tasks with honeypots
+  (<https://github.com/cvat-ai/cvat/pull/8471>)
+- \[Server API\] New endpoints for validation configuration management in tasks and jobs
+  `/api/tasks/{id}/validation_layout`, `/api/jobs/{id}/validation_layout`
+  (<https://github.com/cvat-ai/cvat/pull/8471>)
+
+- \[Helm\] Readiness and liveness probes
+  (<https://github.com/cvat-ai/cvat/pull/8488>)
+
+### Changed
+
+- \[Server API\] POST `/jobs/` `.frames` field now expects relative frame numbers
+  instead of absolute (source data) ones
+  (<https://github.com/cvat-ai/cvat/pull/8348>)
+
+- \[Server API\] Now chunks in tasks can be changed.
+  There are new API elements to check chunk relevancy, if they are cached:
+  `/api/tasks/{id}/data/meta` got a new field `chunks_updated_date`,
+  `/api/tasks/{id}/data/?type=chunk` got 2 new headers: `X-Updated-Date`, `X-Checksum`
+  (<https://github.com/cvat-ai/cvat/pull/8471>)
+
+- Made the `PATCH` endpoints for projects, tasks, jobs and memberships check
+  the input more strictly
+  (<https://github.com/cvat-ai/cvat/pull/8493>):
+
+  - unknown fields are rejected;
+  - updating a field now requires the same level of permissions regardless of
+    whether the new value is the same as the old value.
+
+- \[Server API\] Quality report computation is now allowed to regular users
+  (<https://github.com/cvat-ai/cvat/pull/8511>)
+
+### Fixed
+
+- Invalid chunks for GT jobs when `?number` is used in the request and task frame step > 1
+  (<https://github.com/cvat-ai/cvat/pull/8510>)
+- Invalid output of frames for specific GT frame requests with `api/jobs/{id}/data/?type=frame`
+  (<https://github.com/cvat-ai/cvat/pull/8510>)
+
+<a id='changelog-2.20.0'></a>
+## \[2.20.0\] - 2024-10-01
+
+### Added
+
+- A server setting to enable or disable storage of permanent media chunks on the server filesystem
+  (<https://github.com/cvat-ai/cvat/pull/8272>)
+- \[Server API\] `GET /api/jobs/{id}/data/?type=chunk&index=x` parameter combination.
+  The new `index` parameter allows to retrieve job chunks using 0-based index in each job,
+  instead of the `number` parameter, which used task chunk ids.
+  (<https://github.com/cvat-ai/cvat/pull/8272>)
+
+### Changed
+
+- Job assignees will not receive frames from adjacent jobs in chunks
+  (<https://github.com/cvat-ai/cvat/pull/8272>)
+
+### Deprecated
+
+- \[Server API\] `GET /api/jobs/{id}/data/?type=chunk&number=x` parameter combination
+  (<https://github.com/cvat-ai/cvat/pull/8272>)
+
+### Removed
+
+- Removed the non-functional `task_subsets` parameter from the project create
+  and update endpoints
+  (<https://github.com/cvat-ai/cvat/pull/8492>)
+
+### Fixed
+
+- Various memory leaks in video reading on the server
+  (<https://github.com/cvat-ai/cvat/pull/8272>)
+
+<a id='changelog-2.19.1'></a>
+## \[2.19.1\] - 2024-09-26
+
+### Security
+
+- Fixed a security issue that occurred in PATCH requests to projects|tasks|jobs|memberships
+  (<https://github.com/cvat-ai/cvat/security/advisories/GHSA-gxhm-hg65-5gh2>)
+
+<a id='changelog-2.19.0'></a>
+## \[2.19.0\] - 2024-09-20
+
+### Added
+
+- Quality management tab on `quality control` allows to enabling/disabling GT frames
+  (<https://github.com/cvat-ai/cvat/pull/8329>)
+
+### Changed
+
+- Moved quality control from `analytics` page to `quality control` page
+  (<https://github.com/cvat-ai/cvat/pull/8329>)
+
+### Removed
+
+- Quality report no longer available in CVAT community version
+  (<https://github.com/cvat-ai/cvat/pull/8329>)
+
+### Fixed
+
+- Fixing a problem when project export does not export skeleton tracks
+  (<https://github.com/cvat-ai/cvat/pull/8423>)
+
+### Security
+
+- Fixed an XSS vulnerability in request-related endpoints
+  (<https://github.com/cvat-ai/cvat/security/advisories/GHSA-hp6c-f34j-qjj7>)
+
+- Fixed an XSS vulnerability in the quality report data endpoint
+  (<https://github.com/cvat-ai/cvat/security/advisories/GHSA-2c85-39cc-2px9>)
+
 <a id='changelog-2.18.0'></a>
 ## \[2.18.0\] - 2024-09-10
 

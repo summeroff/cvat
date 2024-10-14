@@ -52,6 +52,22 @@ annotation_path = osp.join(osp.dirname(__file__), 'assets', 'annotations.json')
 with open(annotation_path) as file:
     annotations = json.load(file)
 
+DEFAULT_ATTRIBUTES_FORMATS = [
+    "VGGFace2 1.0",
+    "WiderFace 1.0",
+    "YOLOv8 Classification 1.0",
+    "YOLO 1.1",
+    "YOLOv8 Detection 1.0",
+    "YOLOv8 Segmentation 1.0",
+    "YOLOv8 Oriented Bounding Boxes 1.0",
+    "YOLOv8 Pose 1.0",
+    "PASCAL VOC 1.1",
+    "Segmentation mask 1.1",
+    "ImageNet 1.0",
+    "Cityscapes 1.0",
+    "MOTS PNG 1.0",
+]
+
 
 def generate_image_file(filename, size=(100, 50)):
     f = BytesIO()
@@ -171,6 +187,11 @@ class _DbTestBase(ApiTestBase):
             response = self.client.post("/api/tasks/%s/data" % tid,
                 data=image_data)
             assert response.status_code == status.HTTP_202_ACCEPTED, response.status_code
+            rq_id = response.json()["rq_id"]
+
+            response = self.client.get(f"/api/requests/{rq_id}")
+            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.json()["status"] == "finished", response.json().get("status")
 
             response = self.client.get("/api/tasks/%s" % tid)
 
@@ -396,14 +417,8 @@ class TaskDumpUploadTest(_DbTestBase):
                     else:
                         task = self._create_task(tasks["main"], images)
                     task_id = task["id"]
-                    if dump_format_name in [
-                        "Cityscapes 1.0", "Datumaro 1.0",
-                        "ImageNet 1.0", "MOTS PNG 1.0",
-                        "PASCAL VOC 1.1", "Segmentation mask 1.1",
-                        "VGGFace2 1.0",
-                        "WiderFace 1.0", "YOLO 1.1",
-                        "YOLOv8 Detection 1.0", "YOLOv8 Segmentation 1.0",
-                        "YOLOv8 Oriented Bounding Boxes 1.0", "YOLOv8 Pose 1.0",
+                    if dump_format_name in DEFAULT_ATTRIBUTES_FORMATS + [
+                        "Datumaro 1.0",
                     ]:
                         self._create_annotations(task, dump_format_name, "default")
                     else:
@@ -412,7 +427,7 @@ class TaskDumpUploadTest(_DbTestBase):
                     url = self._generate_url_dump_tasks_annotations(task_id)
 
                     for user, edata in list(expected.items()):
-                        self._clear_rq_jobs() # clean up from previous tests and iterations
+                        self._clear_temp_data() # clean up from previous tests and iterations
 
                         user_name = edata['name']
                         file_zip_name = osp.join(test_dir, f'{test_name}_{user_name}_{dump_format_name}.zip')
@@ -505,14 +520,7 @@ class TaskDumpUploadTest(_DbTestBase):
                         task = self._create_task(tasks["main"], video)
                     task_id = task["id"]
 
-                    if dump_format_name in [
-                            "Cityscapes 1.0", "ImageNet 1.0",
-                            "MOTS PNG 1.0", "PASCAL VOC 1.1",
-                            "Segmentation mask 1.1",
-                            "VGGFace2 1.0", "WiderFace 1.0", "YOLO 1.1",
-                            "YOLOv8 Detection 1.0", "YOLOv8 Segmentation 1.0",
-                            "YOLOv8 Oriented Bounding Boxes 1.0", "YOLOv8 Pose 1.0",
-                    ]:
+                    if dump_format_name in DEFAULT_ATTRIBUTES_FORMATS:
                         self._create_annotations(task, dump_format_name, "default")
                     else:
                         self._create_annotations(task, dump_format_name, "random")
@@ -520,7 +528,7 @@ class TaskDumpUploadTest(_DbTestBase):
                     url = self._generate_url_dump_tasks_annotations(task_id)
 
                     for user, edata in list(expected.items()):
-                        self._clear_rq_jobs() # clean up from previous tests and iterations
+                        self._clear_temp_data() # clean up from previous tests and iterations
 
                         user_name = edata['name']
                         file_zip_name = osp.join(test_dir, f'{test_name}_{user_name}_{dump_format_name}.zip')
@@ -605,7 +613,7 @@ class TaskDumpUploadTest(_DbTestBase):
             for user, edata in list(expected.items()):
                 with self.subTest(format=f"{edata['name']}"):
                     with TestDir() as test_dir:
-                        self._clear_rq_jobs() # clean up from previous tests and iterations
+                        self._clear_temp_data() # clean up from previous tests and iterations
 
                         user_name = edata['name']
                         url = self._generate_url_dump_tasks_annotations(task_id)
@@ -847,7 +855,7 @@ class TaskDumpUploadTest(_DbTestBase):
                     # dump annotations
                     url = self._generate_url_dump_task_dataset(task_id)
                     for user, edata in list(expected.items()):
-                        self._clear_rq_jobs() # clean up from previous tests and iterations
+                        self._clear_temp_data() # clean up from previous tests and iterations
 
                         user_name = edata['name']
                         file_zip_name = osp.join(test_dir, f'{test_name}_{user_name}_{dump_format_name}.zip')
@@ -946,13 +954,8 @@ class TaskDumpUploadTest(_DbTestBase):
                         task = self._create_task(tasks["main"], images)
                     task_id = task["id"]
 
-                    if dump_format_name in [
-                        "MOT 1.1", "PASCAL VOC 1.1", "Segmentation mask 1.1",
-                        "YOLO 1.1", "ImageNet 1.0",
-                        "WiderFace 1.0", "VGGFace2 1.0",
-                        "Datumaro 1.0", "Open Images V6 1.0", "KITTI 1.0",
-                        "YOLOv8 Detection 1.0", "YOLOv8 Segmentation 1.0",
-                        "YOLOv8 Oriented Bounding Boxes 1.0", "YOLOv8 Pose 1.0",
+                    if dump_format_name in DEFAULT_ATTRIBUTES_FORMATS + [
+                        "MOT 1.1", "Datumaro 1.0", "Open Images V6 1.0", "KITTI 1.0",
                     ]:
                         self._create_annotations(task, dump_format_name, "default")
                     else:
@@ -1062,14 +1065,9 @@ class TaskDumpUploadTest(_DbTestBase):
                         task = self._create_task(tasks["main"], images)
 
                     # create annotations
-                    if dump_format_name in [
-                        "MOT 1.1", "MOTS PNG 1.0",
-                        "PASCAL VOC 1.1", "Segmentation mask 1.1",
-                        "YOLO 1.1", "ImageNet 1.0",
-                        "WiderFace 1.0", "VGGFace2 1.0", "LFW 1.0",
+                    if dump_format_name in DEFAULT_ATTRIBUTES_FORMATS + [
+                        "MOT 1.1", "LFW 1.0",
                         "Open Images V6 1.0", "Datumaro 1.0", "KITTI 1.0",
-                        "YOLOv8 Detection 1.0", "YOLOv8 Segmentation 1.0",
-                        "YOLOv8 Oriented Bounding Boxes 1.0", "YOLOv8 Pose 1.0",
                     ]:
                         self._create_annotations(task, dump_format_name, "default")
                     else:
@@ -2096,18 +2094,15 @@ class ProjectDumpUpload(_DbTestBase):
 
                 url = self._generate_url_dump_project_dataset(project['id'], dump_format_name)
 
-                if dump_format_name in [
-                    "Cityscapes 1.0", "Datumaro 1.0", "ImageNet 1.0",
-                    "MOT 1.1", "MOTS PNG 1.0", "PASCAL VOC 1.1",
-                    "Segmentation mask 1.1", "VGGFace2 1.0",
-                    "WiderFace 1.0", "YOLO 1.1", "YOLOv8 Detection 1.0",
+                if dump_format_name in DEFAULT_ATTRIBUTES_FORMATS + [
+                    "Datumaro 1.0", "MOT 1.1",
                 ]:
                     self._create_annotations(task, dump_format_name, "default")
                 else:
                     self._create_annotations(task, dump_format_name, "random")
 
                 for user, edata in list(expected.items()):
-                    self._clear_rq_jobs() # clean up from previous tests and iterations
+                    self._clear_temp_data() # clean up from previous tests and iterations
 
                     user_name = edata['name']
                     file_zip_name = osp.join(test_dir, f'{test_name}_{user_name}_{dump_format_name}.zip')
@@ -2170,7 +2165,7 @@ class ProjectDumpUpload(_DbTestBase):
                     url = self._generate_url_dump_project_annotations(project['id'], dump_format_name)
 
                     for user, edata in list(expected.items()):
-                        self._clear_rq_jobs() # clean up from previous tests and iterations
+                        self._clear_temp_data() # clean up from previous tests and iterations
 
                         user_name = edata['name']
                         file_zip_name = osp.join(test_dir, f'{test_name}_{user_name}_{dump_format_name}.zip')

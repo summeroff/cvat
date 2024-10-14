@@ -18,6 +18,7 @@ import {
     deleteFrame,
     restoreFrame,
     getCachedChunks,
+    getJobFrameNumbers,
     clear as clearFrames,
     findFrame,
     getContextImage,
@@ -26,7 +27,7 @@ import {
     decodePreview,
 } from './frames';
 import Issue from './issue';
-import { SerializedLabel, SerializedTask } from './server-response-types';
+import { SerializedLabel, SerializedTask, SerializedValidationLayout } from './server-response-types';
 import { checkInEnum, checkObjectType } from './common';
 import {
     getCollection, getSaver, clearAnnotations, getAnnotations,
@@ -36,6 +37,7 @@ import AnnotationGuide from './guide';
 import requestsManager from './requests-manager';
 import { Request } from './request';
 import User from './user';
+import ValidationLayout from './validation-layout';
 
 // must be called with task/job context
 async function deleteFrameWrapper(jobID, frame): Promise<void> {
@@ -202,6 +204,19 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
+    Object.defineProperty(Job.prototype.validationLayout, 'implementation', {
+        value: async function validationLayoutImplementation(
+            this: JobClass,
+        ): ReturnType<typeof JobClass.prototype.validationLayout> {
+            const result = await serverProxy.jobs.validationLayout(this.id);
+            if (Object.keys(result).length) {
+                return new ValidationLayout(result as Required<SerializedValidationLayout>);
+            }
+
+            return null;
+        },
+    });
+
     Object.defineProperty(Job.prototype.frames.get, 'implementation', {
         value: function getFrameImplementation(
             this: JobClass,
@@ -228,7 +243,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
                 isPlaying,
                 step,
                 this.dimension,
-                (chunkNumber, quality) => this.frames.chunk(chunkNumber, quality),
+                (chunkIndex, quality) => this.frames.chunk(chunkIndex, quality),
             );
         },
     });
@@ -283,6 +298,14 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
+    Object.defineProperty(Job.prototype.frames.frameNumbers, 'implementation', {
+        value: function includedFramesImplementation(
+            this: JobClass,
+        ): ReturnType<typeof JobClass.prototype.frames.frameNumbers> {
+            return Promise.resolve(getJobFrameNumbers(this.id));
+        },
+    });
+
     Object.defineProperty(Job.prototype.frames.preview, 'implementation', {
         value: function previewImplementation(
             this: JobClass,
@@ -312,10 +335,10 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
     Object.defineProperty(Job.prototype.frames.chunk, 'implementation', {
         value: function chunkImplementation(
             this: JobClass,
-            chunkNumber: Parameters<typeof JobClass.prototype.frames.chunk>[0],
+            chunkIndex: Parameters<typeof JobClass.prototype.frames.chunk>[0],
             quality: Parameters<typeof JobClass.prototype.frames.chunk>[1],
         ): ReturnType<typeof JobClass.prototype.frames.chunk> {
-            return serverProxy.frames.getData(this.id, chunkNumber, quality);
+            return serverProxy.frames.getData(this.id, chunkIndex, quality);
         },
     });
 
@@ -654,6 +677,19 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
         },
     });
 
+    Object.defineProperty(Task.prototype.validationLayout, 'implementation', {
+        value: async function validationLayoutImplementation(
+            this: TaskClass,
+        ): ReturnType<typeof TaskClass.prototype.validationLayout> {
+            const result = await serverProxy.tasks.validationLayout(this.id);
+            if (Object.keys(result).length) {
+                return new ValidationLayout(result as Required<SerializedValidationLayout>);
+            }
+
+            return null;
+        },
+    });
+
     Object.defineProperty(Task.prototype.save, 'implementation', {
         value: async function saveImplementation(
             this: TaskClass,
@@ -663,7 +699,6 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             if (typeof this.id !== 'undefined') {
                 // If the task has been already created, we update it
                 const taskData = {
-                    ...fields,
                     ...this._updateTrigger.getUpdated(this, {
                         bugTracker: 'bug_tracker',
                         projectId: 'project_id',
@@ -710,7 +745,6 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             }
 
             const taskSpec: any = {
-                ...fields,
                 name: this.name,
                 labels: this.labels.map((el) => el.toJSON()),
             };
@@ -753,6 +787,7 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
                 ...(typeof this.dataChunkSize !== 'undefined' ? { chunk_size: this.dataChunkSize } : {}),
                 ...(typeof this.copyData !== 'undefined' ? { copy_data: this.copyData } : {}),
                 ...(typeof this.cloudStorageId !== 'undefined' ? { cloud_storage_id: this.cloudStorageId } : {}),
+                ...(fields.validation_params ? { validation_params: fields.validation_params } : {}),
             };
 
             const { taskID, rqID } = await serverProxy.tasks.create(
@@ -868,7 +903,7 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
                 isPlaying,
                 step,
                 this.dimension,
-                (chunkNumber, quality) => job.frames.chunk(chunkNumber, quality),
+                (chunkIndex, quality) => job.frames.chunk(chunkIndex, quality),
             );
             return result;
         },

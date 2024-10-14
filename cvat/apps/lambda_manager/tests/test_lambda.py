@@ -1,11 +1,10 @@
 # Copyright (C) 2021-2022 Intel Corporation
-# Copyright (C) 2023 CVAT.ai Corporation
+# Copyright (C) 2023-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from itertools import groupby
-from io import BytesIO
 from typing import Dict, Optional
 from unittest import mock, skip
 import json
@@ -14,11 +13,11 @@ import os
 import requests
 from django.contrib.auth.models import Group, User
 from django.http import HttpResponseNotFound, HttpResponseServerError
-from PIL import Image
 from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
-from cvat.apps.engine.tests.utils import filter_dict, get_paginated_collection
+from cvat.apps.engine.tests.utils import (
+    ApiTestBase, filter_dict, ForceLogin, generate_image_file, get_paginated_collection
+)
 
 LAMBDA_ROOT_PATH = '/api/lambda'
 LAMBDA_FUNCTIONS_PATH = f'{LAMBDA_ROOT_PATH}/functions'
@@ -49,34 +48,11 @@ path = os.path.join(os.path.dirname(__file__), 'assets', 'functions.json')
 with open(path) as f:
     functions = json.load(f)
 
-
-def generate_image_file(filename, size=(100, 100)):
-    f = BytesIO()
-    image = Image.new('RGB', size=size)
-    image.save(f, 'jpeg')
-    f.name = filename
-    f.seek(0)
-    return f
-
-
-class ForceLogin:
-    def __init__(self, user, client):
-        self.user = user
-        self.client = client
-
-    def __enter__(self):
-        if self.user:
-            self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
-
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        if self.user:
-            self.client.logout()
-
-class _LambdaTestCaseBase(APITestCase):
+class _LambdaTestCaseBase(ApiTestBase):
     def setUp(self):
-        self.client = APIClient(raise_request_exception=False)
+        super().setUp()
+
+        self.client = self.client_class(raise_request_exception=False)
 
         http_patcher = mock.patch('cvat.apps.lambda_manager.views.LambdaGateway._http', side_effect = self._get_data_from_lambda_manager_http)
         self.addCleanup(http_patcher.stop)
@@ -181,6 +157,11 @@ class _LambdaTestCaseBase(APITestCase):
                 data=data,
                 QUERY_STRING=f'org_id={org_id}' if org_id is not None else None)
             assert response.status_code == status.HTTP_202_ACCEPTED, response.status_code
+            rq_id = response.json()["rq_id"]
+
+            response = self.client.get(f"/api/requests/{rq_id}")
+            assert response.status_code == status.HTTP_200_OK, response.status_code
+            assert response.json()["status"] == "finished", response.json().get("status")
 
             response = self.client.get("/api/tasks/%s" % tid,
                 QUERY_STRING=f'org_id={org_id}' if org_id is not None else None)
@@ -1319,9 +1300,7 @@ class TestComplexFrameSetupCases(_LambdaTestCaseBase):
             "type": "ground_truth",
             "task_id": self.task["id"],
             "frame_selection_method": "manual",
-            "frames": [
-                self.start_frame + frame * self.frame_step for frame in requested_frame_range
-            ],
+            "frames": list(requested_frame_range),
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         job = response.json()
@@ -1338,13 +1317,8 @@ class TestComplexFrameSetupCases(_LambdaTestCaseBase):
         self.assertEqual(len(annotations["tracks"]), 0)
 
         self.assertEqual(
-            {
-                frame: 1 for frame in requested_frame_range
-            },
-            {
-                frame: len(list(group))
-                for frame, group in groupby(annotations["shapes"], key=lambda a: a["frame"])
-            }
+            { frame: 1 for frame in requested_frame_range },
+            Counter(a["frame"] for a in annotations["shapes"])
         )
 
         response = self._get_request(f'/api/tasks/{self.task["id"]}/annotations', self.admin)
@@ -1358,9 +1332,7 @@ class TestComplexFrameSetupCases(_LambdaTestCaseBase):
             "type": "ground_truth",
             "task_id": self.task["id"],
             "frame_selection_method": "manual",
-            "frames": [
-                self.start_frame + frame * self.frame_step for frame in requested_frame_range
-            ],
+            "frames": list(requested_frame_range),
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         job = response.json()
@@ -1430,10 +1402,7 @@ class TestComplexFrameSetupCases(_LambdaTestCaseBase):
             "type": "ground_truth",
             "task_id": self.task["id"],
             "frame_selection_method": "manual",
-            "frames": [
-                self.start_frame + frame * self.frame_step
-                for frame in self.task_rel_frame_range[::3]
-            ],
+            "frames": list(self.task_rel_frame_range[::3]),
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         job = response.json()
@@ -1450,13 +1419,8 @@ class TestComplexFrameSetupCases(_LambdaTestCaseBase):
 
         requested_frame_range = self.task_rel_frame_range
         self.assertEqual(
-            {
-                frame: 1 for frame in requested_frame_range
-            },
-            {
-                frame: len(list(group))
-                for frame, group in groupby(annotations["shapes"], key=lambda a: a["frame"])
-            }
+            { frame: 1 for frame in requested_frame_range },
+            Counter(a["frame"] for a in annotations["shapes"])
         )
 
         response = self._get_request(f'/api/jobs/{job["id"]}/annotations', self.admin)

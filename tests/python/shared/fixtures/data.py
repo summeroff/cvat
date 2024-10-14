@@ -67,7 +67,11 @@ def filter_assets(resources: Iterable, **kwargs):
     exclude_prefix = "exclude_"
 
     for resource in resources:
+        is_matched = True
         for key, value in kwargs.items():
+            if not is_matched:
+                break
+
             op = operator.eq
             if key.startswith(exclude_prefix):
                 key = key[len(exclude_prefix) :]
@@ -85,8 +89,11 @@ def filter_assets(resources: Iterable, **kwargs):
                 if not cur_value:
                     break
 
-            if not rest and op(cur_value, value) or rest and op == operator.ne:
-                filtered_resources.append(resource)
+            if not (not rest and op(cur_value, value) or rest and op == operator.ne):
+                is_matched = False
+
+        if is_matched:
+            filtered_resources.append(resource)
 
     return filtered_resources
 
@@ -342,10 +349,8 @@ def is_issue_admin(issues, jobs, is_task_staff):
 def find_users(test_db):
     def find(**kwargs):
         assert len(kwargs) > 0
-        assert any(kwargs.values())
 
         data = test_db
-        kwargs = dict(filter(lambda a: a[1] is not None, kwargs.items()))
         for field, value in kwargs.items():
             if field.startswith("exclude_"):
                 field = field.split("_", maxsplit=1)[1]
@@ -362,7 +367,7 @@ def find_users(test_db):
 @pytest.fixture(scope="session")
 def test_db(users, users_by_name, memberships):
     data = []
-    fields = ["username", "id", "privilege", "role", "org", "membership_id"]
+    fields = ["username", "id", "privilege", "role", "org", "membership_id", "is_superuser"]
 
     def add_row(**kwargs):
         data.append({field: kwargs.get(field) for field in fields})
@@ -516,3 +521,14 @@ def regular_lonely_user(users):
         if user["username"] == "lonely_user":
             return user["username"]
     raise Exception("Can't find the lonely user in the test DB")
+
+
+@pytest.fixture(scope="session")
+def job_has_annotations(annotations) -> bool:
+    def check_has_annotations(job_id: int) -> bool:
+        job_annotations = annotations["job"][str(job_id)]
+        return bool(
+            job_annotations["tags"] or job_annotations["shapes"] or job_annotations["tracks"]
+        )
+
+    return check_has_annotations
