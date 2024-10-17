@@ -1,4 +1,5 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -8,20 +9,22 @@ import { MoreOutlined } from '@ant-design/icons';
 import Dropdown from 'antd/lib/dropdown';
 import Text from 'antd/lib/typography/Text';
 
-import { ObjectType, ShapeType, ColorBy } from 'reducers/interfaces';
+import { ObjectType, ShapeType, ColorBy } from 'reducers';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import LabelSelector from 'components/label-selector/label-selector';
 import ItemMenu from './object-item-menu';
+import ColorPicker from './color-picker';
 
 interface Props {
     jobInstance: any;
     readonly: boolean;
     clientID: number;
-    serverID: number | undefined;
+    serverID: number | null;
     labelID: number;
     labels: any[];
     shapeType: ShapeType;
     objectType: ObjectType;
+    isGroundTruth: boolean;
     color: string;
     colorBy: ColorBy;
     type: string;
@@ -33,6 +36,7 @@ interface Props {
     toBackgroundShortcut: string;
     toForegroundShortcut: string;
     removeShortcut: string;
+    sliceShortcut: string;
     changeColor(color: string): void;
     changeLabel(label: any): void;
     copy(): void;
@@ -43,6 +47,8 @@ interface Props {
     toBackground(): void;
     toForeground(): void;
     resetCuboidPerspective(): void;
+    edit(): void;
+    slice(): void;
 }
 
 function ItemTopComponent(props: Props): JSX.Element {
@@ -65,6 +71,8 @@ function ItemTopComponent(props: Props): JSX.Element {
         toBackgroundShortcut,
         toForegroundShortcut,
         removeShortcut,
+        sliceShortcut,
+        isGroundTruth,
         changeColor,
         changeLabel,
         copy,
@@ -75,28 +83,18 @@ function ItemTopComponent(props: Props): JSX.Element {
         toBackground,
         toForeground,
         resetCuboidPerspective,
+        edit,
+        slice,
         jobInstance,
     } = props;
 
-    const [menuVisible, setMenuVisible] = useState(false);
     const [colorPickerVisible, setColorPickerVisible] = useState(false);
-
-    const changeMenuVisible = (visible: boolean): void => {
-        if (!visible && colorPickerVisible) return;
-        setMenuVisible(visible);
-    };
-
-    const changeColorPickerVisible = (visible: boolean): void => {
-        if (!visible) {
-            setMenuVisible(false);
-        }
-        setColorPickerVisible(visible);
-    };
 
     return (
         <Row align='middle'>
             <Col span={10}>
                 <Text style={{ fontSize: 12 }}>{clientID}</Text>
+                {isGroundTruth ? <Text style={{ fontSize: 12 }}>&nbsp;GT</Text> : null}
                 <br />
                 <Text
                     type='secondary'
@@ -109,7 +107,7 @@ function ItemTopComponent(props: Props): JSX.Element {
             <Col span={12}>
                 <CVATTooltip title='Change current label'>
                     <LabelSelector
-                        disabled={readonly}
+                        disabled={readonly || shapeType === ShapeType.SKELETON}
                         size='small'
                         labels={labels}
                         value={labelID}
@@ -118,43 +116,64 @@ function ItemTopComponent(props: Props): JSX.Element {
                     />
                 </CVATTooltip>
             </Col>
-            <Col span={2}>
-                <Dropdown
-                    visible={menuVisible}
-                    onVisibleChange={changeMenuVisible}
-                    placement='bottomLeft'
-                    overlay={ItemMenu({
-                        jobInstance,
-                        readonly,
-                        serverID,
-                        locked,
-                        shapeType,
-                        objectType,
-                        color,
-                        colorBy,
-                        colorPickerVisible,
-                        changeColorShortcut,
-                        copyShortcut,
-                        pasteShortcut,
-                        propagateShortcut,
-                        toBackgroundShortcut,
-                        toForegroundShortcut,
-                        removeShortcut,
-                        changeColor,
-                        copy,
-                        remove,
-                        propagate,
-                        createURL,
-                        switchOrientation,
-                        toBackground,
-                        toForeground,
-                        resetCuboidPerspective,
-                        changeColorPickerVisible,
-                    })}
-                >
-                    <MoreOutlined />
-                </Dropdown>
-            </Col>
+            { !isGroundTruth && (
+                colorPickerVisible ? (
+                    <ColorPicker
+                        visible
+                        value={color}
+                        onVisibleChange={setColorPickerVisible}
+                        onChange={(_color: string) => {
+                            changeColor(_color);
+                        }}
+                    >
+                        <Col span={2}>
+                            <MoreOutlined />
+                        </Col>
+                    </ColorPicker>
+                ) : (
+                    <Dropdown
+                        destroyPopupOnHide
+                        placement='bottomLeft'
+                        trigger={['click']}
+                        className='cvat-object-item-menu-button'
+                        menu={ItemMenu({
+                            jobInstance,
+                            readonly,
+                            serverID,
+                            locked,
+                            shapeType,
+                            objectType,
+                            color,
+                            colorBy,
+                            colorPickerVisible,
+                            changeColorShortcut,
+                            copyShortcut,
+                            pasteShortcut,
+                            propagateShortcut,
+                            toBackgroundShortcut,
+                            toForegroundShortcut,
+                            removeShortcut,
+                            sliceShortcut,
+                            changeColor,
+                            copy,
+                            remove,
+                            propagate,
+                            createURL,
+                            switchOrientation,
+                            toBackground,
+                            toForeground,
+                            resetCuboidPerspective,
+                            setColorPickerVisible,
+                            edit,
+                            slice,
+                        })}
+                    >
+                        <Col span={2}>
+                            <MoreOutlined />
+                        </Col>
+                    </Dropdown>
+                )
+            )}
         </Row>
     );
 }

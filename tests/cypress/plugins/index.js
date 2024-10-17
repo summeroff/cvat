@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -40,6 +40,11 @@ module.exports = (on, config) => {
             }
         }
         return launchOptions;
+    });
+    on('after:spec', (spec, results) => {
+        if (results && results.stats.failures === 0 && results.video) {
+            fs.unlinkSync(results.video);
+        }
     });
     return config;
 };

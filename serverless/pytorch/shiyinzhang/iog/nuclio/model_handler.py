@@ -1,4 +1,5 @@
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -8,27 +9,6 @@ import cv2
 import torch
 from networks.mainnetwork import Network
 from dataloaders import helpers
-
-def convert_mask_to_polygon(mask):
-    mask = np.array(mask, dtype=np.uint8)
-    cv2.normalize(mask, mask, 0, 255, cv2.NORM_MINMAX)
-    contours = None
-    if int(cv2.__version__.split('.')[0]) > 3:
-        contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)[0]
-    else:
-        contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)[1]
-
-    contours = max(contours, key=lambda arr: arr.size)
-    if contours.shape.count(1):
-        contours = np.squeeze(contours)
-    if contours.size < 3 * 2:
-        raise Exception('Less then three point have been detected. Can not build a polygon.')
-
-    polygon = []
-    for point in contours:
-        polygon.append([int(point[0]), int(point[1])])
-
-    return polygon
 
 class ModelHandler:
     def __init__(self):
@@ -108,16 +88,14 @@ class ModelHandler:
             pred = np.squeeze(pred)
 
             # Convert a mask to a polygon
-            polygon = convert_mask_to_polygon(pred)
-            def translate_points_to_image(points):
-                points = [
-                    (p[0] / crop_scale[0] + crop_bbox[0], # x
-                     p[1] / crop_scale[1] + crop_bbox[1]) # y
-                    for p in points]
+            pred = np.array(pred, dtype=np.uint8)
+            pred = cv2.resize(pred, dsize=(crop_shape[0], crop_shape[1]),
+                interpolation=cv2.INTER_CUBIC)
+            cv2.normalize(pred, pred, 0, 255, cv2.NORM_MINMAX)
 
-                return points
+            mask = np.zeros((image.height, image.width), dtype=np.uint8)
+            x = int(crop_bbox[0])
+            y = int(crop_bbox[1])
+            mask[y : y + crop_shape[1], x : x + crop_shape[0]] = pred
 
-            polygon = translate_points_to_image(polygon)
-
-            return polygon
-
+            return mask

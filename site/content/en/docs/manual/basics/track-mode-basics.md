@@ -1,7 +1,7 @@
 ---
 title: 'Track mode (basics)'
 linkTitle: 'Track mode'
-weight: 16
+weight: 18
 description: 'Usage examples and basic operations available during annotation in track mode.'
 ---
 Usage examples:
@@ -67,4 +67,4 @@ Usage examples:
 
      ![](/images/gif003_detrac.gif)
 
-     Read more in the section [track mode (advanced)](/docs/manual/advanced/track-mode-advanced/).
+     Read more in the section {{< ilink "/docs/manual/advanced/track-mode-advanced" "track mode (advanced)" >}}.

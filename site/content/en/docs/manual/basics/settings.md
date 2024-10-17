@@ -1,7 +1,7 @@
 ---
 title: 'Settings'
 linkTitle: 'Settings'
-weight: 13
+weight: 15
 ---
 To open the settings open the user menu in the header and select the settings item or press `F2`.
 
@@ -51,15 +51,24 @@ In tab `Workspace` you can:
 - `Font size of a text` - specifies the text size of the object details.
 
 - `Automatic bordering` - enable automatic bordering for polygons and polylines during drawing/editing.
-  For more information To find out more, go to the section [annotation with polygons](/docs/manual/advanced/annotation-with-polygons/).
+  For more information To find out more, go to the section
+  {{< ilink "/docs/manual/advanced/annotation-with-polygons" "annotation with polygons" >}}.
 
-- `Intelligent polygon cropping` - activates intelligent cropping when editing the polygon (read more in the section [edit polygon](/docs/manual/advanced/annotation-with-polygons/edit-polygon/)
+- `Intelligent polygon cropping` - activates intelligent cropping when editing the polygon (read more in the section
+  {{< ilink "/docs/manual/advanced/annotation-with-polygons/edit-polygon" "edit polygon" >}}
+
+- `Show tags on frame` - shows/hides frame tags on current frame
 
 - `Attribute annotation mode (AAM) zoom margin` input box — defines margins (in px)
   for shape in the attribute annotation mode.
-- Click `Save` to save settings (settings will be saved on the server and will not change after the page is refreshed).
-  Click `Cancel` or press `F2` to return to the annotation.
+
+- `Control points size` — defines a size of any interactable points in the tool
+(polygon's vertices, rectangle dragging points, etc.)
 
 - `Default number of points in polygon approximation`
   With this setting, you can choose the default number of points in polygon.
   Works for serverless interactors and OpenCV scissors.
+
+- Click `Save` to save settings (settings will be saved on the server and will not change after the page is refreshed).
+  Click `Cancel` or press `F2` to return to the annotation.
+

@@ -1,4 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,17 +8,14 @@ import { useDispatch } from 'react-redux';
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router';
 import Spin from 'antd/lib/spin';
-import Button from 'antd/lib/button';
-import message from 'antd/lib/message';
-import Text from 'antd/lib/typography/Text';
 import { Col, Row } from 'antd/lib/grid';
 import Pagination from 'antd/lib/pagination';
 
-import { TasksQuery, Indexable } from 'reducers/interfaces';
-import FeedbackComponent from 'components/feedback/feedback';
+import { TasksQuery, Indexable } from 'reducers';
 import { updateHistoryFromQuery } from 'components/resource-sorting-filtering';
 import TaskListContainer from 'containers/tasks-page/tasks-list';
-import { getTasksAsync, hideEmptyTasks, importTaskAsync } from 'actions/tasks-actions';
+import { getTasksAsync } from 'actions/tasks-actions';
+import { anySearch } from 'utils/any-search';
 
 import TopBar from './top-bar';
 import EmptyListComponent from './empty-list';
@@ -27,12 +25,11 @@ interface Props {
     importing: boolean;
     query: TasksQuery;
     count: number;
-    countInvisible: number;
 }
 
 function TasksPageComponent(props: Props): JSX.Element {
     const {
-        query, fetching, importing, count, countInvisible,
+        query, fetching, importing, count,
     } = props;
 
     const dispatch = useDispatch();
@@ -61,26 +58,7 @@ function TasksPageComponent(props: Props): JSX.Element {
         }
     }, [query]);
 
-    useEffect(() => {
-        if (countInvisible) {
-            message.destroy();
-            message.info(
-                <>
-                    <Text>Some tasks are temporary hidden because they are not fully created yet</Text>
-                    <Button
-                        type='link'
-                        onClick={(): void => {
-                            dispatch(hideEmptyTasks(true));
-                            message.destroy();
-                        }}
-                    >
-                        Show all
-                    </Button>
-                </>,
-                5,
-            );
-        }
-    }, [countInvisible]);
+    const isAnySearch = anySearch<TasksQuery>(query);
 
     const content = count ? (
         <>
@@ -105,7 +83,7 @@ function TasksPageComponent(props: Props): JSX.Element {
             </Row>
         </>
     ) : (
-        <EmptyListComponent query={query} />
+        <EmptyListComponent notFound={isAnySearch} />
     );
 
     return (
@@ -139,7 +117,6 @@ function TasksPageComponent(props: Props): JSX.Element {
                     );
                 }}
                 query={updatedQuery}
-                onImportTask={(file: File) => dispatch(importTaskAsync(file))}
                 importing={importing}
             />
             { fetching ? (
@@ -147,7 +124,6 @@ function TasksPageComponent(props: Props): JSX.Element {
                     <Spin size='large' className='cvat-spinner' />
                 </div>
             ) : content }
-            <FeedbackComponent />
         </div>
     );
 }

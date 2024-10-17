@@ -1,18 +1,25 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-import consts from 'consts';
+import config from 'config';
 import { AnnotationActionTypes } from 'actions/annotation-actions';
 import { ReviewActionTypes } from 'actions/review-actions';
 import { AuthActionTypes } from 'actions/auth-actions';
-import { ReviewState } from './interfaces';
+import { QualityConflict } from 'cvat-core-wrapper';
+import { ReviewState } from '.';
 
 const defaultState: ReviewState = {
     issues: [],
     latestComments: [],
-    frameIssues: [], // saved on the server and not saved on the server
-    newIssuePosition: null,
+    frameIssues: [],
+    conflicts: [],
+    frameConflicts: [],
+    newIssue: {
+        position: null,
+        source: null,
+    },
     issuesHidden: false,
     issuesResolvedHidden: false,
     fetching: {
@@ -26,20 +33,29 @@ export default function (state: ReviewState = defaultState, action: any): Review
         case AnnotationActionTypes.GET_JOB_SUCCESS: {
             const {
                 issues,
+                conflicts,
                 frameData: { number: frame },
             } = action.payload;
             const frameIssues = issues.filter((issue: any): boolean => issue.frame === frame);
+            const frameConflicts = conflicts.filter((conflict: QualityConflict): boolean => conflict.frame === frame);
 
             return {
                 ...state,
                 issues,
                 frameIssues,
+                conflicts,
+                frameConflicts,
             };
         }
-        case AnnotationActionTypes.CHANGE_FRAME: {
+        case AnnotationActionTypes.CHANGE_FRAME:
+        case ReviewActionTypes.CANCEL_ISSUE:
+        case AnnotationActionTypes.DELETE_FRAME_SUCCESS: {
             return {
                 ...state,
-                newIssuePosition: null,
+                newIssue: {
+                    position: null,
+                    source: null,
+                },
             };
         }
         case ReviewActionTypes.SUBMIT_REVIEW: {
@@ -52,15 +68,7 @@ export default function (state: ReviewState = defaultState, action: any): Review
                 },
             };
         }
-        case ReviewActionTypes.SUBMIT_REVIEW_SUCCESS: {
-            return {
-                ...state,
-                fetching: {
-                    ...state.fetching,
-                    jobId: null,
-                },
-            };
-        }
+        case ReviewActionTypes.SUBMIT_REVIEW_SUCCESS:
         case ReviewActionTypes.SUBMIT_REVIEW_FAILED: {
             return {
                 ...state,
@@ -72,16 +80,25 @@ export default function (state: ReviewState = defaultState, action: any): Review
         }
         case AnnotationActionTypes.CHANGE_FRAME_SUCCESS: {
             const { number: frame } = action.payload;
+            let frameConflicts: QualityConflict[] = [];
+            if (state.conflicts.length) {
+                frameConflicts = state.conflicts.filter((conflict) => conflict.frame === frame);
+            }
+
             return {
                 ...state,
                 frameIssues: state.issues.filter((issue: any): boolean => issue.frame === frame),
+                frameConflicts,
             };
         }
         case ReviewActionTypes.START_ISSUE: {
-            const { position } = action.payload;
+            const { position, source } = action.payload;
             return {
                 ...state,
-                newIssuePosition: position,
+                newIssue: {
+                    position,
+                    source,
+                },
             };
         }
         case ReviewActionTypes.FINISH_ISSUE_SUCCESS: {
@@ -97,21 +114,18 @@ export default function (state: ReviewState = defaultState, action: any): Review
                         new Set(
                             [...state.latestComments, issue.comments[0].message].filter(
                                 (message: string): boolean => ![
-                                    consts.QUICK_ISSUE_INCORRECT_POSITION_TEXT,
-                                    consts.QUICK_ISSUE_INCORRECT_ATTRIBUTE_TEXT,
+                                    config.QUICK_ISSUE_INCORRECT_POSITION_TEXT,
+                                    config.QUICK_ISSUE_INCORRECT_ATTRIBUTE_TEXT,
                                 ].includes(message),
                             ),
                         ),
-                    ).slice(-consts.LATEST_COMMENTS_SHOWN_QUICK_ISSUE),
+                    ).slice(-config.LATEST_COMMENTS_SHOWN_QUICK_ISSUE),
                 frameIssues,
                 issues,
-                newIssuePosition: null,
-            };
-        }
-        case ReviewActionTypes.CANCEL_ISSUE: {
-            return {
-                ...state,
-                newIssuePosition: null,
+                newIssue: {
+                    position: null,
+                    source: null,
+                },
             };
         }
         case ReviewActionTypes.COMMENT_ISSUE:
@@ -178,11 +192,9 @@ export default function (state: ReviewState = defaultState, action: any): Review
         }
         case AnnotationActionTypes.CLOSE_JOB:
         case AuthActionTypes.LOGOUT_SUCCESS: {
-            return { ...defaultState };
+            return defaultState;
         }
         default:
             return state;
     }
-
-    return state;
 }

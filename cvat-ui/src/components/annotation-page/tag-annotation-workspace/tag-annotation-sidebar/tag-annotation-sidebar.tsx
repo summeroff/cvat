@@ -1,4 +1,5 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,27 +8,29 @@ import { connect } from 'react-redux';
 import { Action } from 'redux';
 import { ThunkDispatch } from 'redux-thunk';
 import { Row, Col } from 'antd/lib/grid';
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import {
+    MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined,
+} from '@ant-design/icons';
 import Layout, { SiderProps } from 'antd/lib/layout';
 import Checkbox, { CheckboxChangeEvent } from 'antd/lib/checkbox/Checkbox';
 import Button from 'antd/lib/button/button';
 import Text from 'antd/lib/typography/Text';
-import Tag from 'antd/lib/tag';
 
 import {
     createAnnotationsAsync,
-    removeObjectAsync,
+    removeObject as removeObjectAction,
     changeFrameAsync,
     rememberObject,
 } from 'actions/annotation-actions';
-import { Canvas } from 'cvat-canvas-wrapper';
-import { Canvas3d } from 'cvat-canvas3d-wrapper';
-import { CombinedState, ObjectType } from 'reducers/interfaces';
-import { adjustContextImagePosition } from 'components/annotation-page/standard-workspace/context-image/context-image';
+import { getCore, Label, LabelType } from 'cvat-core-wrapper';
+import { CombinedState, ObjectType } from 'reducers';
+import { filterApplicableForType } from 'utils/filter-applicable-labels';
 import LabelSelector from 'components/label-selector/label-selector';
-import getCore from 'cvat-core-wrapper';
 import isAbleToChangeFrame from 'utils/is-able-to-change-frame';
 import GlobalHotKeys, { KeyMap } from 'utils/mousetrap-react';
+import { ShortcutScope } from 'utils/enums';
+import { registerComponentShortcuts } from 'actions/shortcuts-actions';
+import { subKeyMap } from 'utils/component-subkeymap';
 import ShortcutsSelect from './shortcuts-select';
 
 const cvat = getCore();
@@ -36,15 +39,16 @@ interface StateToProps {
     states: any[];
     labels: any[];
     jobInstance: any;
-    canvasInstance: Canvas | Canvas3d;
     frameNumber: number;
     keyMap: KeyMap;
     normalizedKeyMap: Record<string, string>;
+    frameData: any;
+    showDeletedFrames: boolean;
 }
 
 interface DispatchToProps {
-    removeObject(jobInstance: any, objectState: any): void;
-    createAnnotations(jobInstance: any, frame: number, objectStates: any[]): void;
+    removeObject(objectState: any): void;
+    createAnnotations(objectStates: any[]): void;
     changeFrame(frame: number, fillBuffer?: boolean, frameStep?: number): void;
     onRememberObject(labelID: number): void;
 }
@@ -53,36 +57,56 @@ function mapStateToProps(state: CombinedState): StateToProps {
     const {
         annotation: {
             player: {
-                frame: { number: frameNumber },
+                frame: { number: frameNumber, data: frameData },
             },
             annotations: { states },
             job: { instance: jobInstance, labels },
-            canvas: { instance: canvasInstance },
         },
         shortcuts: { keyMap, normalizedKeyMap },
+        settings: {
+            player: { showDeletedFrames },
+        },
     } = state;
 
     return {
         jobInstance,
         labels,
         states,
-        canvasInstance,
         frameNumber,
         keyMap,
         normalizedKeyMap,
+        frameData,
+        showDeletedFrames,
     };
 }
+
+const componentShortcuts = {
+    SWITCH_DRAW_MODE_TAG_ANNOTATION: {
+        name: 'Draw mode',
+        description: 'Repeat the latest procedure of drawing with the same parameters',
+        sequences: ['n'],
+        scope: ShortcutScope.TAG_ANNOTATION_WORKSPACE,
+    },
+    SWITCH_REDRAW_MODE_TAG_ANNOTATION: {
+        name: 'Redraw shape',
+        description: 'Remove selected shape and redraw it from scratch',
+        sequences: ['shift+n'],
+        scope: ShortcutScope.TAG_ANNOTATION_WORKSPACE,
+    },
+};
+
+registerComponentShortcuts(componentShortcuts);
 
 function mapDispatchToProps(dispatch: ThunkDispatch<CombinedState, {}, Action>): DispatchToProps {
     return {
         changeFrame(frame: number, fillBuffer?: boolean, frameStep?: number): void {
             dispatch(changeFrameAsync(frame, fillBuffer, frameStep));
         },
-        createAnnotations(jobInstance: any, frame: number, objectStates: any[]): void {
-            dispatch(createAnnotationsAsync(jobInstance, frame, objectStates));
+        createAnnotations(objectStates: any[]): void {
+            dispatch(createAnnotationsAsync(objectStates));
         },
-        removeObject(jobInstance: any, objectState: any): void {
-            dispatch(removeObjectAsync(jobInstance, objectState, true));
+        removeObject(objectState: any): void {
+            dispatch(removeObjectAction(objectState, false));
         },
         onRememberObject(labelID: number): void {
             dispatch(rememberObject({ activeObjectType: ObjectType.TAG, activeLabelID: labelID }));
@@ -97,11 +121,12 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
         removeObject,
         jobInstance,
         changeFrame,
-        canvasInstance,
         frameNumber,
         onRememberObject,
         createAnnotations,
         keyMap,
+        frameData,
+        showDeletedFrames,
     } = props;
 
     const preventDefault = (event: KeyboardEvent | undefined): void => {
@@ -110,11 +135,15 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
         }
     };
 
-    const defaultLabelID = labels.length ? labels[0].id : null;
+    const [applicableLabels, setApplicableLabels] = useState<Label[]>(
+        filterApplicableForType(LabelType.TAG, labels),
+    );
+    const controlsDisabled = !applicableLabels.length || frameData.deleted;
+    const defaultLabelID = applicableLabels.length ? applicableLabels[0].id as number : null;
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [frameTags, setFrameTags] = useState([] as any[]);
-    const [selectedLabelID, setSelectedLabelID] = useState<number>(defaultLabelID);
+    const [selectedLabelID, setSelectedLabelID] = useState<number | null>(defaultLabelID);
     const [skipFrame, setSkipFrame] = useState(false);
 
     useEffect(() => {
@@ -124,13 +153,16 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
     }, []);
 
     useEffect(() => {
+        setApplicableLabels(filterApplicableForType(LabelType.TAG, labels));
+    }, [labels]);
+
+    useEffect(() => {
         const listener = (event: Event): void => {
             if (
                 (event as TransitionEvent).propertyName === 'width' &&
                 ((event.target as any).classList as DOMTokenList).contains('cvat-tag-annotation-sidebar')
             ) {
-                canvasInstance.fitCanvas();
-                canvasInstance.fit();
+                window.dispatchEvent(new Event('resize'));
             }
         };
 
@@ -144,7 +176,8 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
     }, []);
 
     useEffect(() => {
-        setFrameTags(states.filter((objectState: any): boolean => objectState.objectType === ObjectType.TAG));
+        const tags = states.filter((objectState: any): boolean => objectState.objectType === ObjectType.TAG);
+        setFrameTags(tags);
     }, [states]);
 
     const siderProps: SiderProps = {
@@ -162,91 +195,109 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
         setSelectedLabelID(value.id);
     };
 
-    const onRemoveState = (objectState: any): void => {
-        removeObject(jobInstance, objectState);
+    const onRemoveState = (labelID: number): void => {
+        const objectState = frameTags.find((tag: any): boolean => tag.label.id === labelID);
+        if (objectState) removeObject(objectState);
     };
 
-    const onChangeFrame = (): void => {
-        const frame = Math.min(jobInstance.stopFrame, frameNumber + 1);
-
-        if (isAbleToChangeFrame()) {
+    const onChangeFrame = async (): Promise<void> => {
+        const frame = await jobInstance.frames.search(
+            { notDeleted: !showDeletedFrames },
+            frameNumber + 1,
+            jobInstance.stopFrame,
+        );
+        if (frame !== null && isAbleToChangeFrame(frame)) {
             changeFrame(frame);
         }
     };
 
     const onAddTag = (labelID: number): void => {
-        onRememberObject(labelID);
+        if (frameTags.every((objectState: any): boolean => objectState.label.id !== labelID)) {
+            onRememberObject(labelID);
 
-        const objectState = new cvat.classes.ObjectState({
-            objectType: ObjectType.TAG,
-            label: labels.filter((label: any) => label.id === labelID)[0],
-            frame: frameNumber,
-        });
+            const objectState = new cvat.classes.ObjectState({
+                objectType: ObjectType.TAG,
+                label: labels.filter((label: any) => label.id === labelID)[0],
+                frame: frameNumber,
+            });
+            createAnnotations([objectState]);
 
-        createAnnotations(jobInstance, frameNumber, [objectState]);
-
-        if (skipFrame) onChangeFrame();
+            if (skipFrame) onChangeFrame();
+        }
     };
 
-    const subKeyMap = {
-        SWITCH_DRAW_MODE: keyMap.SWITCH_DRAW_MODE,
+    const onShortcutPress = (event: KeyboardEvent | undefined, labelID: number): void => {
+        if (event?.shiftKey) {
+            onRemoveState(labelID);
+        } else {
+            onAddTag(labelID);
+        }
     };
 
-    const handlers = {
-        SWITCH_DRAW_MODE: (event: KeyboardEvent | undefined) => {
+    const handlers: Record<keyof typeof componentShortcuts, (event?: KeyboardEvent) => void> = {
+        SWITCH_DRAW_MODE_TAG_ANNOTATION: (event: KeyboardEvent | undefined) => {
             preventDefault(event);
-            onAddTag(selectedLabelID);
+            if (selectedLabelID !== null) {
+                onAddTag(selectedLabelID);
+            }
+        },
+        SWITCH_REDRAW_MODE_TAG_ANNOTATION: (event: KeyboardEvent | undefined) => {
+            preventDefault(event);
+            if (selectedLabelID !== null) {
+                onRemoveState(selectedLabelID);
+            }
         },
     };
 
-    return !labels.length ? (
+    return controlsDisabled ? (
         <Layout.Sider {...siderProps}>
             {/* eslint-disable-next-line */}
             <span
-                className={`cvat-objects-sidebar-sider
-                    ant-layout-sider-zero-width-trigger
-                    ant-layout-sider-zero-width-trigger-left`}
+                className='cvat-objects-sidebar-sider'
                 onClick={() => {
-                    adjustContextImagePosition(!sidebarCollapsed);
                     setSidebarCollapsed(!sidebarCollapsed);
                 }}
             >
                 {sidebarCollapsed ? <MenuFoldOutlined title='Show' /> : <MenuUnfoldOutlined title='Hide' />}
             </span>
-            <Row justify='center' className='labels-tag-annotation-sidebar-not-found-wrapper'>
+            <Row justify='center' className='cvat-tag-annotation-sidebar-empty'>
                 <Col>
-                    <Text strong>No labels are available.</Text>
+                    <Text strong>Can&apos;t place tag on this frame.</Text>
                 </Col>
             </Row>
         </Layout.Sider>
     ) : (
         <>
-            <GlobalHotKeys keyMap={subKeyMap} handlers={handlers} />
+            <GlobalHotKeys keyMap={subKeyMap(componentShortcuts, keyMap)} handlers={handlers} />
             <Layout.Sider {...siderProps}>
                 {/* eslint-disable-next-line */}
                 <span
-                    className={`cvat-objects-sidebar-sider
-                        ant-layout-sider-zero-width-trigger
-                        ant-layout-sider-zero-width-trigger-left`}
+                    className='cvat-objects-sidebar-sider'
                     onClick={() => {
-                        adjustContextImagePosition(!sidebarCollapsed);
                         setSidebarCollapsed(!sidebarCollapsed);
                     }}
                 >
                     {sidebarCollapsed ? <MenuFoldOutlined title='Show' /> : <MenuUnfoldOutlined title='Hide' />}
                 </span>
-                <Row justify='start' className='cvat-tag-annotation-sidebar-label-select'>
+                <Row justify='start' className='cvat-tag-annotation-sidebar-tag-label'>
                     <Col>
-                        <Text strong>Tag label</Text>
-                        <LabelSelector labels={labels} value={selectedLabelID} onChange={onChangeLabel} />
+                        <Text strong>Tag label:</Text>
                     </Col>
                 </Row>
-                <Row justify='space-around' className='cvat-tag-annotation-sidebar-buttons'>
-                    <Col span={8}>
-                        <Button onClick={() => onAddTag(selectedLabelID)}>Add tag</Button>
-                    </Col>
-                    <Col span={8}>
-                        <Button onClick={onChangeFrame}>Skip frame</Button>
+                <Row justify='start' className='cvat-tag-annotation-sidebar-label-select'>
+                    <Col>
+                        <LabelSelector
+                            labels={applicableLabels}
+                            value={selectedLabelID}
+                            onChange={onChangeLabel}
+                            onEnterPress={onAddTag}
+                        />
+                        <Button
+                            type='primary'
+                            className='cvat-add-tag-button'
+                            onClick={() => onAddTag(selectedLabelID as number)}
+                            icon={<PlusOutlined />}
+                        />
                     </Col>
                 </Row>
                 <Row className='cvat-tag-annotation-sidebar-checkbox-skip-frame'>
@@ -261,27 +312,9 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
                         </Checkbox>
                     </Col>
                 </Row>
-                <Row justify='start' className='cvat-tag-annotation-sidebar-frame-tags'>
-                    <Col>
-                        <Text strong>Frame tags:&nbsp;</Text>
-                        {frameTags.map((tag: any) => (
-                            <Tag
-                                className='cvat-tag-annotation-sidebar-frame-tag-label'
-                                color={tag.label.color}
-                                onClose={() => {
-                                    onRemoveState(tag);
-                                }}
-                                key={tag.clientID}
-                                closable
-                            >
-                                {tag.label.name}
-                            </Tag>
-                        ))}
-                    </Col>
-                </Row>
                 <Row>
                     <Col>
-                        <ShortcutsSelect onAddTag={onAddTag} />
+                        <ShortcutsSelect labels={applicableLabels} onShortcutPress={onShortcutPress} />
                     </Col>
                 </Row>
                 <Row justify='center' className='cvat-tag-annotation-sidebar-shortcut-help'>
@@ -291,11 +324,10 @@ function TagAnnotationSidebar(props: StateToProps & DispatchToProps): JSX.Elemen
                             <Text code>N</Text>
                             &nbsp;or digits&nbsp;
                             <Text code>0-9</Text>
-                            &nbsp;to add selected tag
-                            <br />
-                            or&nbsp;
-                            <Text code>→</Text>
-                            &nbsp;to skip frame
+                            &nbsp;to add selected tag.&nbsp;
+                            Add&nbsp;
+                            <Text code>Shift</Text>
+                            &nbsp;modifier to remove selected tag.
                         </Text>
                     </Col>
                 </Row>

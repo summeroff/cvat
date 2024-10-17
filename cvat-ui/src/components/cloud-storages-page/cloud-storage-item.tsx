@@ -1,4 +1,5 @@
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2021-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -12,15 +13,14 @@ import Paragraph from 'antd/lib/typography/Paragraph';
 import Text from 'antd/lib/typography/Text';
 import Button from 'antd/lib/button';
 import Dropdown from 'antd/lib/dropdown';
-import Menu from 'antd/lib/menu';
 import Modal from 'antd/lib/modal';
 import moment from 'moment';
 
-import { CloudStorage, CombinedState } from 'reducers/interfaces';
+import { CloudStorage, CombinedState } from 'reducers';
 import { deleteCloudStorageAsync } from 'actions/cloud-storage-actions';
 import CVATTooltip from 'components/common/cvat-tooltip';
+import Preview from 'components/common/preview';
 import Status from './cloud-storage-status';
-import Preview from './cloud-storage-preview';
 
 interface Props {
     cloudStorage: CloudStorage;
@@ -74,7 +74,12 @@ export default function CloudStorageItemComponent(props: Props): JSX.Element {
         <Card
             cover={(
                 <>
-                    <Preview cloudStorage={cloudStorage} />
+                    <Preview
+                        cloudStorage={cloudStorage}
+                        loadingClassName='cvat-cloud-storage-item-loading-preview'
+                        emptyPreviewClassName='cvat-cloud-storage-item-empty-preview'
+                        previewClassName='cvat-cloud-storage-item-preview'
+                    />
                     {description ? (
                         <CVATTooltip overlay={description}>
                             <QuestionCircleOutlined className='cvat-cloud-storage-description-icon' />
@@ -89,7 +94,7 @@ export default function CloudStorageItemComponent(props: Props): JSX.Element {
         >
             <Meta
                 title={(
-                    <Paragraph>
+                    <Paragraph ellipsis={{ tooltip: displayName }}>
                         <Text strong>{`#${id}: `}</Text>
                         <Text>{displayName}</Text>
                     </Paragraph>
@@ -112,12 +117,20 @@ export default function CloudStorageItemComponent(props: Props): JSX.Element {
                         </Paragraph>
                         <Status cloudStorage={cloudStorage} />
                         <Dropdown
-                            overlay={(
-                                <Menu className='cvat-project-actions-menu'>
-                                    <Menu.Item onClick={onUpdate}>Update</Menu.Item>
-                                    <Menu.Item onClick={onDelete}>Delete</Menu.Item>
-                                </Menu>
-                            )}
+                            trigger={['click']}
+                            destroyPopupOnHide
+                            menu={{
+                                className: 'cvat-cloud-storage-actions-menu',
+                                items: [{
+                                    key: 'update',
+                                    label: 'Update',
+                                    onClick: onUpdate,
+                                }, {
+                                    key: 'delete',
+                                    label: 'Delete',
+                                    onClick: onDelete,
+                                }],
+                            }}
                         >
                             <Button
                                 className='cvat-cloud-storage-item-menu-button'

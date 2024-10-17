@@ -1,4 +1,5 @@
 // Copyright (C) 2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -8,7 +9,7 @@ import {
     OrderedListOutlined, SortAscendingOutlined, SortDescendingOutlined,
 } from '@ant-design/icons';
 import Button from 'antd/lib/button';
-import Dropdown from 'antd/lib/dropdown';
+import Popover from 'antd/lib/popover';
 import Radio from 'antd/lib/radio';
 
 import CVATTooltip from 'components/common/cvat-tooltip';
@@ -17,6 +18,7 @@ interface Props {
     sortingFields: string[];
     defaultFields: string[];
     visible: boolean;
+    disabled?: boolean;
     onVisibleChange(visible: boolean): void;
     onApplySorting(sorting: string | null): void;
 }
@@ -55,7 +57,7 @@ const SortableItem = SortableElement(
                 <Radio.Button disabled={valueIndex > anchorIndex}>{value}</Radio.Button>
                 <div>
                     <CVATTooltip overlay={appliedSorting[value]?.startsWith('-') ? 'Descending sort' : 'Ascending sort'}>
-                        <Button type='text' disabled={!isActiveField} onClick={onClick}>
+                        <Button className='cvat-switch-sort-order-button' type='text' disabled={!isActiveField} onClick={onClick}>
                             {
                                 isDescendingField ? (
                                     <SortDescendingOutlined />
@@ -97,7 +99,7 @@ const SortableList = SortableContainer(
 function SortingModalComponent(props: Props): JSX.Element {
     const {
         sortingFields: sortingFieldsProp,
-        defaultFields, visible, onApplySorting, onVisibleChange,
+        defaultFields, visible, onApplySorting, onVisibleChange, disabled,
     } = props;
     const [appliedSorting, setAppliedSorting] = useState<Record<string, string>>(
         defaultFields.reduce((acc: Record<string, string>, field: string) => {
@@ -119,17 +121,22 @@ function SortingModalComponent(props: Props): JSX.Element {
 
     useEffect(() => {
         setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
         const listener = (event: MouseEvent): void => {
             const path: HTMLElement[] = event.composedPath()
                 .filter((el: EventTarget) => el instanceof HTMLElement) as HTMLElement[];
             if (path.some((el: HTMLElement) => el.id === 'root') && !path.some((el: HTMLElement) => el.classList.contains('ant-btn'))) {
-                onVisibleChange(false);
+                if (visible) {
+                    onVisibleChange(false);
+                }
             }
         };
 
         window.addEventListener('click', listener);
         return () => window.removeEventListener('click', listener);
-    }, []);
+    }, [visible]);
 
     useEffect(() => {
         if (!isMounted) return;
@@ -168,11 +175,12 @@ function SortingModalComponent(props: Props): JSX.Element {
     }, [appliedSorting]);
 
     return (
-        <Dropdown
-            destroyPopupOnHide
-            visible={visible}
+        <Popover
+            destroyTooltipOnHide
+            open={visible}
             placement='bottomLeft'
-            overlay={(
+            overlayInnerStyle={{ padding: 0 }}
+            content={(
                 <SortableList
                     onSortEnd={({ oldIndex, newIndex }: { oldIndex: number, newIndex: number }) => {
                         if (oldIndex !== newIndex) {
@@ -188,11 +196,16 @@ function SortingModalComponent(props: Props): JSX.Element {
                 />
             )}
         >
-            <Button type='default' onClick={() => onVisibleChange(!visible)}>
+            <Button
+                disabled={disabled}
+                className='cvat-switch-sort-constructor-button'
+                type='default'
+                onClick={() => onVisibleChange(!visible)}
+            >
                 Sort by
                 <OrderedListOutlined />
             </Button>
-        </Dropdown>
+        </Popover>
     );
 }
 

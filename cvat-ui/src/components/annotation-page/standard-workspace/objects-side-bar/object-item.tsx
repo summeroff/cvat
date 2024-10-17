@@ -1,12 +1,16 @@
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2021-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-import React from 'react';
+import React, { useCallback } from 'react';
+import Text from 'antd/lib/typography/Text';
+import Collapse from 'antd/lib/collapse';
 
 import ObjectButtonsContainer from 'containers/annotation-page/standard-workspace/objects-side-bar/object-buttons';
-import { ObjectType, ShapeType, ColorBy } from 'reducers/interfaces';
-import ItemDetails, { attrValuesAreEqual } from './object-item-details';
+import ItemDetailsContainer from 'containers/annotation-page/standard-workspace/objects-side-bar/object-item-details';
+import { ObjectType, ShapeType, ColorBy } from 'reducers';
+import ObjectItemElementComponent from './object-item-element';
 import ItemBasics from './object-item-basics';
 
 interface Props {
@@ -16,49 +20,29 @@ interface Props {
     objectType: ObjectType;
     shapeType: ShapeType;
     clientID: number;
-    serverID: number | undefined;
+    serverID: number | null;
     labelID: number;
+    isGroundTruth: boolean;
     locked: boolean;
-    attrValues: Record<number, string>;
+    elements: number[];
     color: string;
     colorBy: ColorBy;
     labels: any[];
     attributes: any[];
-    collapsed: boolean;
     jobInstance: any;
-    activate(): void;
+    activate(activeElementID?: number): void;
     copy(): void;
     propagate(): void;
-    createURL(): void;
     switchOrientation(): void;
+    createURL(): void;
     toBackground(): void;
     toForeground(): void;
     remove(): void;
     changeLabel(label: any): void;
-    changeAttribute(attrID: number, value: string): void;
     changeColor(color: string): void;
-    collapse(): void;
     resetCuboidPerspective(): void;
-}
-
-function objectItemsAreEqual(prevProps: Props, nextProps: Props): boolean {
-    return (
-        nextProps.activated === prevProps.activated &&
-        nextProps.readonly === prevProps.readonly &&
-        nextProps.locked === prevProps.locked &&
-        nextProps.labelID === prevProps.labelID &&
-        nextProps.color === prevProps.color &&
-        nextProps.clientID === prevProps.clientID &&
-        nextProps.serverID === prevProps.serverID &&
-        nextProps.objectType === prevProps.objectType &&
-        nextProps.shapeType === prevProps.shapeType &&
-        nextProps.collapsed === prevProps.collapsed &&
-        nextProps.labels === prevProps.labels &&
-        nextProps.attributes === prevProps.attributes &&
-        nextProps.normalizedKeyMap === prevProps.normalizedKeyMap &&
-        nextProps.colorBy === prevProps.colorBy &&
-        attrValuesAreEqual(nextProps.attrValues, prevProps.attrValues)
-    );
+    edit(): void;
+    slice(): void;
 }
 
 function ObjectItemComponent(props: Props): JSX.Element {
@@ -70,14 +54,14 @@ function ObjectItemComponent(props: Props): JSX.Element {
         clientID,
         serverID,
         locked,
-        attrValues,
         labelID,
         color,
         colorBy,
+        elements,
         attributes,
         labels,
-        collapsed,
         normalizedKeyMap,
+        isGroundTruth,
         activate,
         copy,
         propagate,
@@ -87,10 +71,10 @@ function ObjectItemComponent(props: Props): JSX.Element {
         toForeground,
         remove,
         changeLabel,
-        changeAttribute,
         changeColor,
-        collapse,
         resetCuboidPerspective,
+        edit,
+        slice,
         jobInstance,
     } = props;
 
@@ -103,11 +87,14 @@ function ObjectItemComponent(props: Props): JSX.Element {
         'cvat-objects-sidebar-state-item' :
         'cvat-objects-sidebar-state-item cvat-objects-sidebar-state-active-item';
 
+    const activateState = useCallback(() => {
+        activate();
+    }, []);
+
     return (
         <div style={{ display: 'flex', marginBottom: '1px' }}>
-            <div className='cvat-objects-sidebar-state-item-color' style={{ background: `${color}` }} />
             <div
-                onMouseEnter={activate}
+                onMouseEnter={activateState}
                 id={`cvat-objects-sidebar-state-item-${clientID}`}
                 className={className}
                 style={{ backgroundColor: `${color}88` }}
@@ -125,6 +112,7 @@ function ObjectItemComponent(props: Props): JSX.Element {
                     colorBy={colorBy}
                     type={type}
                     locked={locked}
+                    isGroundTruth={isGroundTruth}
                     copyShortcut={normalizedKeyMap.COPY_SHAPE}
                     pasteShortcut={normalizedKeyMap.PASTE_SHAPE}
                     propagateShortcut={normalizedKeyMap.PROPAGATE_OBJECT}
@@ -132,6 +120,7 @@ function ObjectItemComponent(props: Props): JSX.Element {
                     toForegroundShortcut={normalizedKeyMap.TO_FOREGROUND}
                     removeShortcut={normalizedKeyMap.DELETE_OBJECT}
                     changeColorShortcut={normalizedKeyMap.CHANGE_OBJECT_COLOR}
+                    sliceShortcut={normalizedKeyMap.SWITCH_SLICE_MODE}
                     changeLabel={changeLabel}
                     changeColor={changeColor}
                     copy={copy}
@@ -142,16 +131,33 @@ function ObjectItemComponent(props: Props): JSX.Element {
                     toBackground={toBackground}
                     toForeground={toForeground}
                     resetCuboidPerspective={resetCuboidPerspective}
+                    edit={edit}
+                    slice={slice}
                 />
                 <ObjectButtonsContainer readonly={readonly} clientID={clientID} />
                 {!!attributes.length && (
-                    <ItemDetails
+                    <ItemDetailsContainer
                         readonly={readonly}
-                        collapsed={collapsed}
-                        attributes={attributes}
-                        values={attrValues}
-                        collapse={collapse}
-                        changeAttribute={changeAttribute}
+                        clientID={clientID}
+                        parentID={null}
+                    />
+                )}
+                {!!elements.length && (
+                    <Collapse
+                        className='cvat-objects-sidebar-state-item-elements-collapse'
+                        items={[{
+                            key: 'elements',
+                            label: <Text style={{ fontSize: 10 }} type='secondary'>PARTS</Text>,
+                            children: elements.map((element: number) => (
+                                <ObjectItemElementComponent
+                                    key={element}
+                                    readonly={readonly}
+                                    parentID={clientID}
+                                    clientID={element}
+                                    onMouseLeave={activateState}
+                                />
+                            )),
+                        }]}
                     />
                 )}
             </div>
@@ -159,4 +165,4 @@ function ObjectItemComponent(props: Props): JSX.Element {
     );
 }
 
-export default React.memo(ObjectItemComponent, objectItemsAreEqual);
+export default React.memo(ObjectItemComponent);

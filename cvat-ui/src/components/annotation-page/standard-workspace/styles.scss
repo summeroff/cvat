@@ -1,89 +1,56 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-@import 'base.scss';
+@import 'base';
 
 .cvat-standard-workspace.ant-layout {
     height: 100%;
-}
 
-.cvat-context-image-wrapper {
-    height: auto;
-    width: $grid-unit-size * 32;
-    position: absolute;
-    top: $grid-unit-size;
-    right: $grid-unit-size;
-    z-index: 100;
-    background: black;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    user-select: none;
-
-    > .cvat-context-image-wrapper-header {
-        height: $grid-unit-size * 4;
-        width: 100%;
-        z-index: 101;
-        background: rgba(0, 0, 0, 0.2);
-        position: absolute;
-        top: 0;
-        left: 0;
+    > .ant-layout-content {
+        overflow: hidden hidden;
     }
-
-    > .ant-image {
-        margin: $grid-unit-size * 0.5;
-    }
-
-    > span {
-        position: absolute;
-        font-size: 18px;
-        top: 7px;
-        right: 7px;
-        z-index: 102;
-        color: white;
-
-        &:hover {
-            > svg {
-                transform: scale(1.2);
-            }
-        }
-    }
-}
-
-.cvat-context-image {
-    width: 100%;
-    height: auto;
-    display: block;
 }
 
 .cvat-objects-sidebar-sider {
     top: 0;
     right: 0;
-    left: auto;
-    background-color: $background-color-2;
     border-left: 1px solid $border-color-1;
     border-bottom: 1px solid $border-color-1;
-    border-radius: 4px 0 0 4px;
+    border-radius: $border-radius-base 0 0 $border-radius-base;
     z-index: 2;
+    position: absolute;
+    padding: 8px;
+    background: white;
+    transition: box-shadow 0.5s;
+
+    &:hover {
+        box-shadow: $box-shadow-base;
+    }
 }
 
 .cvat-objects-sidebar {
     height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden auto;
 
     > .ant-layout-sider-children {
         display: flex;
         flex-direction: column;
 
         > .cvat-objects-sidebar-tabs {
-            flex-grow: 10;
+            flex-grow: 1;
+            padding-top: $grid-unit-size;
+            height: 0;
 
             > div {
                 display: flex;
 
-                div[role='tabpanel'] {
+                div[role="tab"] {
+                    color: $text-color;
+                }
+
+                div[role="tabpanel"] {
                     height: 100%;
                 }
             }
@@ -99,8 +66,8 @@
     transform: scaleX(-1);
 }
 
-.cvat-canvas-controls-sidebar {
-    background-color: $background-color-2;
+.ant-layout-sider.cvat-canvas-controls-sidebar {
+    background: $background-color-2;
     border-right: 1px solid $border-color-1;
     overflow: hidden;
 }
@@ -115,16 +82,20 @@
 .cvat-draw-polyline-control,
 .cvat-draw-points-control,
 .cvat-draw-ellipse-control,
+.cvat-draw-mask-control,
 .cvat-draw-cuboid-control,
+.cvat-draw-skeleton-control,
 .cvat-setup-tag-control,
 .cvat-merge-control,
 .cvat-group-control,
+.cvat-join-control,
+.cvat-slice-control,
 .cvat-split-track-control,
 .cvat-issue-control,
 .cvat-tools-control,
 .cvat-extra-controls-control,
 .cvat-opencv-control {
-    border-radius: 3.3px;
+    border-radius: $border-radius-base;
     transform: scale(0.65);
     padding: 2px;
 
@@ -139,6 +110,8 @@
 
     > svg {
         transform: scale(0.8);
+        width: 40px;
+        height: 40px;
     }
 }
 
@@ -161,7 +134,6 @@
 .cvat-rotate-canvas-controls-left,
 .cvat-rotate-canvas-controls-right {
     transform: scale(0.65);
-    border-radius: 5px;
 
     &:hover {
         transform: scale(0.75);
@@ -173,7 +145,7 @@
 }
 
 .cvat-rotate-canvas-popover {
-    .ant-popover-inner-content {
+    .ant-popover-content > .ant-popover-inner {
         padding: 0;
     }
 }
@@ -182,7 +154,7 @@
 .cvat-opencv-control-popover,
 .cvat-setup-tag-popover,
 .cvat-tools-control-popover {
-    .ant-popover-inner-content {
+    .ant-popover-content > .ant-popover-inner {
         padding: 0;
     }
 }
@@ -190,7 +162,18 @@
 .cvat-tools-track-button,
 .cvat-tools-interact-button {
     width: 100%;
-    margin-top: 10px;
+    margin-top: $grid-unit-size;
+}
+
+.cvat-tools-interactor-setups {
+    > div {
+        margin-top: $grid-unit-size * 2;
+        width: 100%;
+
+        > .ant-switch {
+            margin-right: $grid-unit-size;
+        }
+    }
 }
 
 .cvat-interactors-tips-icon-container {
@@ -198,13 +181,19 @@
     font-size: 20px;
 }
 
+.cvat-interactors-setups-container {
+    margin-top: $grid-unit-size;
+    margin-bottom: $grid-unit-size;
+
+    > button {
+        margin-right: $grid-unit-size;
+    }
+}
+
 .cvat-interactor-tip-container {
-    background: $background-color-2;
-    padding: $grid-unit-size;
-    box-shadow: $box-shadow-base;
     width: $grid-unit-size * 40;
     text-align: center;
-    border-radius: 4px;
+    border-radius: $border-radius-base;
 }
 
 .cvat-interactor-tip-image {
@@ -225,6 +214,10 @@
     .ant-tabs-tab {
         width: $grid-unit-size * 14;
         justify-content: center;
+    }
+
+    .ant-progress {
+        margin-left: $grid-unit-size;
     }
 }
 
@@ -268,43 +261,73 @@
     margin-top: $grid-unit-size;
 }
 
-.cvat-setup-tag-popover-content,
-.cvat-draw-shape-popover-content {
+.cvat-popover-content {
     padding: $grid-unit-size;
     border-radius: $grid-unit-size;
     background: $background-color-2;
-    width: 34 * $grid-unit-size;
+    width: $grid-unit-size * 32;
 
     > div {
         margin-top: $grid-unit-size;
     }
+}
+
+.cvat-setup-tag-popover-content {
+    @extend .cvat-popover-content;
+
+    .ant-select {
+        width: 27 * $grid-unit-size;
+    }
+
+    > div:last-child {
+        margin-bottom: $grid-unit-size;
+    }
+}
+
+.cvat-draw-shape-popover-content {
+    @extend .cvat-popover-content;
 
     > div:nth-child(3) > div > div {
         width: 100%;
     }
 
-    > div:last-child {
-        span {
-            width: 100%;
+    > div:last-child > div {
+        display: flex;
+        justify-content: space-between;
+
+        &:has(.cvat-draw-mask-shape-button) {
+            justify-content: space-around;
         }
 
         button {
-            width: 100%;
-
-            &:nth-child(1) {
-                border-radius: 3px 0 0 3px;
-            }
-
-            &:nth-child(2) {
-                border-radius: 0 3px 3px 0;
-            }
+            width: $grid-unit-size * 15;
         }
     }
 }
 
 .cvat-propagate-confirm {
-    > .ant-input-number {
-        width: 70px;
-        margin: 0 5px;
+    > .ant-row {
+        align-items: flex-start;
+        margin-bottom: $grid-unit-size * 2;
     }
+
+    .ant-input-number {
+        margin-left: $grid-unit-size;
+        margin-right: $grid-unit-size;
+        width: $grid-unit-size * 7;
+    }
+
+    .cvat-propagate-slider-wrapper {
+        height: $grid-unit-size;
+    }
+
+    .cvat-propagate-up-to-wrapper > div:first-child {
+        margin-bottom: $grid-unit-size;
+    }
+}
+
+.cvat-remove-object-confirm-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: $grid-unit-size * 2;
 }

@@ -1,8 +1,9 @@
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
-@import 'base.scss';
+@import 'base';
 
 .cvat-create-issue-dialog {
     position: absolute;
@@ -29,11 +30,35 @@
     max-width: 16 * $grid-unit-size;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-radius: 0;
+    border-radius: $border-radius-base;
     transform-origin: top left;
 
     &:hover {
         opacity: 1;
+    }
+}
+
+.cvat-conflict-label {
+    position: absolute;
+    min-width: 2 * $grid-unit-size;
+    z-index: 99;
+    transition: none;
+    pointer-events: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: $border-radius-base;
+    transform-origin: top left;
+    background: none;
+    border: none;
+    margin: 0;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    svg {
+        width: 1.5em;
+        height: 1.5em;
     }
 }
 
@@ -47,8 +72,7 @@
     padding: $grid-unit-size;
     transform-origin: top left;
     box-shadow: $box-shadow-base;
-    border-radius: 0.5 * $grid-unit-size;
-    opacity: 0.95;
+    border-radius: $border-radius-base;
 
     .cvat-issue-dialog-chat {
         > div {
@@ -69,7 +93,7 @@
             }
         }
 
-        border-radius: 0.5 * $grid-unit-size;
+        user-select: all;
         background: $background-color-1;
         padding: $grid-unit-size;
         max-height: $grid-unit-size * 45;
@@ -109,4 +133,28 @@
     @extend .cvat-hidden-issue-indicator;
 
     color: $danger-icon-color;
+}
+
+.cvat-conflict-error {
+    svg {
+        path:first-child {
+            fill: #e10602;
+        }
+    }
+}
+
+.cvat-conflict-warning {
+    svg {
+        path:first-child {
+            fill: #ff7300;
+        }
+    }
+}
+
+.cvat-conflict-darken {
+    svg {
+        path:first-child {
+            fill: #838383;
+        }
+    }
 }

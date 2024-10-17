@@ -1,4 +1,5 @@
 // Copyright (C) 2021-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -8,9 +9,11 @@ import { Row, Col } from 'antd/lib/grid';
 import Button from 'antd/lib/button';
 import { PlusOutlined } from '@ant-design/icons';
 
-import { CloudStoragesQuery } from 'reducers/interfaces';
+import { CloudStoragesQuery } from 'reducers';
 import Input from 'antd/lib/input';
 import { SortingComponent, ResourceFilterHOC, defaultVisibility } from 'components/resource-sorting-filtering';
+
+import dimensions from 'utils/dimensions';
 
 import {
     localStorageRecentKeyword, localStorageRecentCapacity,
@@ -36,8 +39,8 @@ export default function StoragesTopBar(props: Props): JSX.Element {
     const [visibility, setVisibility] = useState(defaultVisibility);
 
     return (
-        <Row justify='space-between' align='middle' className='cvat-cloud-storages-list-top-bar'>
-            <Col span={24}>
+        <Row justify='center' align='middle' className='cvat-cloud-storages-list-top-bar'>
+            <Col {...dimensions}>
                 <div className='cvat-cloudstorages-page-filters-wrapper'>
                     <Input.Search
                         enterButton
@@ -50,7 +53,7 @@ export default function StoragesTopBar(props: Props): JSX.Element {
                     />
                     <div>
                         <SortingComponent
-                            visible={visibility.sorting}
+                            open={visibility.sorting}
                             onVisibleChange={(visible: boolean) => (
                                 setVisibility({ ...defaultVisibility, sorting: visible })
                             )}
@@ -81,7 +84,6 @@ export default function StoragesTopBar(props: Props): JSX.Element {
                     </div>
                 </div>
                 <Button
-                    size='large'
                     className='cvat-attach-cloud-storage-button'
                     type='primary'
                     onClick={(): void => history.push('/cloudstorages/create')}

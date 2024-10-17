@@ -1,12 +1,13 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2023 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import React from 'react';
 import Layout from 'antd/lib/layout';
 
-import GlobalHotKeys, { KeyMap } from 'utils/mousetrap-react';
-import { ActiveControl, Rotation } from 'reducers/interfaces';
+import { KeyMap } from 'utils/mousetrap-react';
+import { ActiveControl, Rotation } from 'reducers';
 import { Canvas } from 'cvat-canvas-wrapper';
 
 import RotateControl from 'components/annotation-page/standard-workspace/controls-side-bar/rotate-control';
@@ -21,50 +22,20 @@ interface Props {
     activeControl: ActiveControl;
     keyMap: KeyMap;
     normalizedKeyMap: Record<string, string>;
-
+    frameIsDeleted: boolean;
     rotateFrame(rotation: Rotation): void;
-    selectIssuePosition(enabled: boolean): void;
+    updateActiveControl(activeControl: ActiveControl): void;
 }
 
 export default function ControlsSideBarComponent(props: Props): JSX.Element {
     const {
-        canvasInstance, activeControl, normalizedKeyMap, keyMap, rotateFrame, selectIssuePosition,
+        canvasInstance, activeControl, normalizedKeyMap, rotateFrame, updateActiveControl, frameIsDeleted,
     } = props;
 
-    const preventDefault = (event: KeyboardEvent | undefined): void => {
-        if (event) {
-            event.preventDefault();
-        }
-    };
-
-    const subKeyMap = {
-        CANCEL: keyMap.CANCEL,
-        OPEN_REVIEW_ISSUE: keyMap.OPEN_REVIEW_ISSUE,
-    };
-
-    const handlers = {
-        CANCEL: (event: KeyboardEvent | undefined) => {
-            preventDefault(event);
-            if (activeControl !== ActiveControl.CURSOR) {
-                canvasInstance.cancel();
-            }
-        },
-        OPEN_REVIEW_ISSUE: (event: KeyboardEvent | undefined) => {
-            preventDefault(event);
-            if (activeControl === ActiveControl.OPEN_ISSUE) {
-                canvasInstance.selectRegion(false);
-                selectIssuePosition(false);
-            } else {
-                canvasInstance.cancel();
-                canvasInstance.selectRegion(true);
-                selectIssuePosition(true);
-            }
-        },
-    };
+    const controlsDisabled = frameIsDeleted;
 
     return (
         <Layout.Sider className='cvat-canvas-controls-sidebar' theme='light' width={44}>
-            <GlobalHotKeys keyMap={subKeyMap} handlers={handlers} />
             <CursorControl
                 cursorShortkey={normalizedKeyMap.CANCEL}
                 canvasInstance={canvasInstance}
@@ -86,7 +57,8 @@ export default function ControlsSideBarComponent(props: Props): JSX.Element {
             <IssueControl
                 canvasInstance={canvasInstance}
                 activeControl={activeControl}
-                selectIssuePosition={selectIssuePosition}
+                updateActiveControl={updateActiveControl}
+                disabled={controlsDisabled}
             />
         </Layout.Sider>
     );

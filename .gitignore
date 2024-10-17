@@ -4,7 +4,7 @@
 /share/
 /static/
 /db.sqlite3
-/.env
+/.*env*
 /keys
 /logs
 /profiles
@@ -20,6 +20,7 @@ __pycache__
 ._*
 .coverage
 .husky/
+.python-version
 
 # Ignore npm logs file
 npm-debug.log*
@@ -44,6 +45,7 @@ yarn-error.log*
 /site/resources/
 /site/node_modules/
 /site/tech-doc-hugo
+/site/.hugo_build.lock
 
 # Ignore all the installed packages
 node_modules
@@ -62,3 +64,5 @@ cvat-core/reports
 # produced by prepare in the root package.json script
 .husky
 
+# produced by cvat/apps/iam/rules/tests/generate_tests.py
+/cvat/apps/*/rules/*_test.gen.rego

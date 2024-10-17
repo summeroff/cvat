@@ -1,4 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -12,7 +13,11 @@ Cypress.Commands.add('goToProjectsList', () => {
 
 Cypress.Commands.add(
     'createProjects',
-    (projectName, labelName, attrName, textDefaultValue, multiAttrParams, expectedResult = 'success') => {
+    (
+        projectName, labelName, attrName, textDefaultValue,
+        multiAttrParams, advancedConfigurationParams,
+        expectedResult = 'success',
+    ) => {
         cy.get('.cvat-create-project-dropdown').click();
         cy.get('.cvat-create-project-button').click();
         cy.get('#name').type(projectName);
@@ -26,9 +31,12 @@ Cypress.Commands.add(
         if (multiAttrParams) {
             cy.updateAttributes(multiAttrParams);
         }
-        cy.contains('button', 'Done').click();
+        if (advancedConfigurationParams) {
+            cy.advancedConfiguration(advancedConfigurationParams);
+        }
+        cy.contains('button', 'Continue').click();
         cy.get('.cvat-create-project-content').within(() => {
-            cy.contains('Submit').click();
+            cy.contains('button', 'Submit & Continue').click();
         });
         if (expectedResult === 'success') {
             cy.get('.cvat-notification-create-project-success').should('exist').find('[data-icon="close"]').click();
@@ -70,25 +78,43 @@ Cypress.Commands.add('openProject', (projectName) => {
     cy.get('.cvat-project-details').should('exist');
 });
 
-Cypress.Commands.add('projectActions', (projectName) => {
+Cypress.Commands.add('openProjectActions', (projectName) => {
     cy.contains('.cvat-projects-project-item-title', projectName)
         .parents('.cvat-projects-project-item-card')
         .within(() => {
-            cy.get('.cvat-porjects-project-item-description').within(() => {
-                cy.get('[type="button"]').trigger('mouseover');
+            cy.get('.cvat-projects-project-item-description').within(() => {
+                cy.get('[type="button"]').click();
             });
         });
 });
 
+Cypress.Commands.add('clickInProjectMenu', (item, fromProjectPage, projectName = '') => {
+    if (fromProjectPage) {
+        cy.get('.cvat-project-top-bar-actions').click();
+    } else {
+        cy.openProjectActions(projectName);
+    }
+
+    cy.get('.cvat-project-actions-menu')
+        .should('exist')
+        .and('be.visible')
+        .contains(item)
+        .click();
+});
+
 Cypress.Commands.add('deleteProject', (projectName, projectID, expectedResult = 'success') => {
-    cy.projectActions(projectName);
-    cy.get('.cvat-project-actions-menu').contains('Delete').click();
+    cy.clickInProjectMenu('Delete', false, projectName);
+    const interceptorName = `deleteProject_${projectID}`;
+    cy.intercept('DELETE', `/api/projects/${projectID}**`).as(interceptorName);
     cy.get('.cvat-modal-confirm-remove-project')
         .should('contain', `The project ${projectID} will be deleted`)
         .within(() => {
             cy.contains('button', 'Delete').click();
         });
     if (expectedResult === 'success') {
+        cy.wait(`@${interceptorName}`).then((interseption) => {
+            expect(interseption.response.statusCode).to.be.equal(204);
+        });
         cy.get('.cvat-projects-project-item-card').should('have.css', 'opacity', '0.5');
     } else if (expectedResult === 'fail') {
         cy.get('.cvat-projects-project-item-card').should('not.have.css', 'opacity', '0.5');
@@ -96,28 +122,27 @@ Cypress.Commands.add('deleteProject', (projectName, projectID, expectedResult = 
 });
 
 Cypress.Commands.add('exportProject', ({
-    projectName, type, dumpType, archiveCustomeName,
+    projectName, type, dumpType, archiveCustomName,
 }) => {
-    cy.projectActions(projectName);
-    cy.get('.cvat-project-actions-menu').contains('Export dataset').click();
+    cy.clickInProjectMenu('Export dataset', false, projectName);
     cy.get('.cvat-modal-export-project').should('be.visible').find('.cvat-modal-export-select').click();
     cy.contains('.cvat-modal-export-option-item', dumpType).should('be.visible').click();
     cy.get('.cvat-modal-export-select').should('contain.text', dumpType);
     if (type === 'dataset') {
-        cy.get('.cvat-modal-export-project').find('[type="checkbox"]').should('not.be.checked').check();
+        cy.get('.cvat-modal-export-project').find('.cvat-modal-export-save-images').should('not.be.checked').click();
     }
-    if (archiveCustomeName) {
-        cy.get('.cvat-modal-export-project').find('.cvat-modal-export-filename-input').type(archiveCustomeName);
+    if (archiveCustomName) {
+        cy.get('.cvat-modal-export-project').find('.cvat-modal-export-filename-input').type(archiveCustomName);
     }
     cy.get('.cvat-modal-export-project').contains('button', 'OK').click();
     cy.get('.cvat-notification-notice-export-project-start').should('be.visible');
+    cy.closeNotification('.cvat-notification-notice-export-project-start');
 });
 
 Cypress.Commands.add('importProject', ({
     projectName, format, archive,
 }) => {
-    cy.projectActions(projectName);
-    cy.get('.cvat-project-actions-menu').contains('Import dataset').click();
+    cy.clickInProjectMenu('Import dataset', false, projectName);
     cy.get('.cvat-modal-import-dataset').find('.cvat-modal-import-select').click();
     if (format === 'Sly Point Cloud Format') {
         cy.get('.ant-select-dropdown')
@@ -129,48 +154,98 @@ Cypress.Commands.add('importProject', ({
     cy.get('input[type="file"]').last().attachFile(archive, { subjectType: 'drag-n-drop' });
     cy.get(`[title="${archive}"]`).should('be.visible');
     cy.contains('button', 'OK').click();
-    cy.get('.cvat-modal-import-dataset-status').should('be.visible');
+    cy.get('.cvat-modal-upload-file-status').should('be.visible');
     cy.get('.cvat-notification-notice-import-dataset-start').should('be.visible');
-    cy.get('.cvat-modal-import-dataset-status').should('not.exist');
+    cy.closeNotification('.cvat-notification-notice-import-dataset-start');
+    cy.get('.cvat-modal-upload-file-status').should('not.exist');
 });
 
-Cypress.Commands.add('backupProject', (projectName) => {
-    cy.projectActions(projectName);
-    cy.get('.cvat-project-actions-menu').contains('Backup Project').click();
-});
+Cypress.Commands.add(
+    'backupProject',
+    (
+        projectName,
+        backupFileName,
+        targetStorage = null,
+        useDefaultLocation = true,
+    ) => {
+        cy.clickInProjectMenu('Backup Project', false, projectName);
+        cy.get('.cvat-modal-export-project').should('be.visible');
+        if (backupFileName) {
+            cy.get('.cvat-modal-export-project').find('.cvat-modal-export-filename-input').type(backupFileName);
+        }
+        if (!useDefaultLocation) {
+            cy.get('.cvat-modal-export-project')
+                .find('.cvat-settings-switch')
+                .click();
+            cy.get('.cvat-select-target-storage').within(() => {
+                cy.get('.ant-select-selection-item').click();
+            });
+            cy.contains('.cvat-select-target-storage-location', targetStorage.location)
+                .should('be.visible')
+                .click();
 
-Cypress.Commands.add('restoreProject', (archiveWithBackup) => {
-    cy.intercept('POST', '/api/projects/backup?**').as('restoreProject');
+            if (targetStorage && targetStorage.cloudStorageId) {
+                cy.get('.cvat-search-target-storage-cloud-storage-field').click();
+                cy.get('.cvat-cloud-storage-select-provider').click();
+            }
+        }
+        cy.get('.cvat-modal-export-project').contains('button', 'OK').click();
+        cy.get('.cvat-notification-notice-export-backup-start').should('be.visible');
+        cy.closeNotification('.cvat-notification-notice-export-backup-start');
+    },
+);
+
+Cypress.Commands.add('restoreProject', (archiveWithBackup, sourceStorage = null) => {
+    cy.intercept({ method: /PATCH|POST/, url: /\/api\/projects\/backup.*/ }).as('restoreProject');
+    cy.intercept({ method: /GET/, url: /\/api\/requests.*/ }).as('requestStatus');
     cy.get('.cvat-create-project-dropdown').click();
-    cy.get('.cvat-import-project').click().find('input[type=file]').attachFile(archiveWithBackup);
-    cy.wait('@restoreProject', { timeout: 5000 }).its('response.statusCode').should('equal', 202);
-    cy.wait('@restoreProject').its('response.statusCode').should('equal', 201);
-    cy.contains('Project has been created succesfully')
+    cy.get('.cvat-import-project-button').click();
+
+    if (sourceStorage) {
+        cy.get('.cvat-select-source-storage').within(() => {
+            cy.get('.ant-select-selection-item').click();
+        });
+        cy.contains('.cvat-select-source-storage-location', sourceStorage.location)
+            .should('be.visible')
+            .click();
+        if (sourceStorage.cloudStorageId) {
+            cy.get('.cvat-search-source-storage-cloud-storage-field').click();
+            cy.get('.cvat-cloud-storage-select-provider').click();
+            cy.get('.cvat-modal-import-backup')
+                .find('.cvat-modal-import-filename-input')
+                .type(archiveWithBackup);
+        }
+    } else {
+        cy.get('input[type=file]').attachFile(archiveWithBackup, { subjectType: 'drag-n-drop' });
+        cy.get(`[title="${archiveWithBackup}"]`).should('be.visible');
+    }
+
+    cy.contains('button', 'OK').click();
+    cy.get('.cvat-notification-notice-import-backup-start').should('be.visible');
+    cy.closeNotification('.cvat-notification-notice-import-backup-start');
+
+    if (!sourceStorage || !sourceStorage.cloudStorageId) {
+        cy.wait('@restoreProject').its('response.statusCode').should('equal', 202);
+        cy.wait('@restoreProject').its('response.statusCode').should('equal', 201);
+        cy.wait('@restoreProject').its('response.statusCode').should('equal', 204);
+        cy.wait('@requestStatus').its('response.statusCode').should('equal', 200);
+    } else {
+        cy.wait('@restoreProject').its('response.statusCode').should('equal', 202);
+    }
+
+    cy.contains('The project has been restored successfully. Click here to open')
         .should('exist')
         .and('be.visible');
-    cy.get('[data-icon="close"]').click(); // Close the notification
+    cy.closeNotification('.ant-notification-notice-info');
 });
 
-Cypress.Commands.add('getDownloadFileName', () => {
-    cy.intercept('GET', '**=download').as('download');
-    cy.wait('@download').then((download) => {
-        const filename = download.response.headers['content-disposition'].split(';')[1].split('filename=')[1];
-        // need to remove quotes
-        return filename.substring(1, filename.length - 1);
-    });
-});
-
-Cypress.Commands.add('waitForDownload', () => {
-    cy.getDownloadFileName().then((filename) => {
-        cy.verifyDownload(filename);
-    });
+Cypress.Commands.add('waitForFileUploadToCloudStorage', () => {
+    cy.get('.ant-notification-notice-info').contains('uploaded to cloud storage').should('be.visible');
+    cy.verifyNotification();
 });
 
 Cypress.Commands.add('deleteProjectViaActions', (projectName) => {
-    cy.get('.cvat-project-top-bar-actions').trigger('mouseover');
-    cy.get('.cvat-project-actions-menu').within(() => {
-        cy.contains('[role="menuitem"]', 'Delete').click();
-    });
+    cy.clickInProjectMenu('Delete', true);
     cy.get('.cvat-modal-confirm-remove-project').within(() => {
         cy.contains('button', 'Delete').click();
     });
@@ -178,11 +253,13 @@ Cypress.Commands.add('deleteProjectViaActions', (projectName) => {
 });
 
 Cypress.Commands.add('assignProjectToUser', (user) => {
+    cy.intercept('GET', `/api/users?**search=${user}**`).as('searchUsers');
     cy.get('.cvat-project-details').within(() => {
-        cy.get('.cvat-user-search-field').click().type(user);
-        cy.wait(300);
+        cy.get('.cvat-user-search-field').click();
+        cy.get('.cvat-user-search-field').type(user);
     });
-    cy.get('.ant-select-dropdown')
+    cy.wait('@searchUsers');
+    cy.get('.cvat-user-search-dropdown')
         .not('.ant-select-dropdown-hidden')
         .within(() => {
             cy.get(`.ant-select-item-option[title="${user}"]`).click();
@@ -194,18 +271,8 @@ Cypress.Commands.add('closeNotification', (className) => {
     cy.get(className).should('not.exist');
 });
 
-Cypress.Commands.add('movingTask', (taskName, projectName, labelMappingFrom, labelMappingTo, fromTask) => {
-    if (fromTask) {
-        cy.contains('.cvat-text-color', 'Actions').click();
-    } else {
-        cy.contains('strong', taskName).parents('.cvat-tasks-list-item').find('.cvat-menu-icon').click();
-    }
-    cy.get('.cvat-actions-menu')
-        .should('be.visible')
-        .find('[role="menuitem"]')
-        .filter(':contains("Move to project")')
-        .last()
-        .click();
+Cypress.Commands.add('movingTask', (taskName, projectName, labelMappingFrom, labelMappingTo, fromTaskPage) => {
+    cy.clickInTaskMenu('Move to project', fromTaskPage, taskName);
     cy.get('.cvat-task-move-modal').find('.cvat-project-search-field').click();
     cy.get('.ant-select-dropdown')
         .last()
@@ -216,7 +283,10 @@ Cypress.Commands.add('movingTask', (taskName, projectName, labelMappingFrom, lab
     if (labelMappingFrom !== labelMappingTo) {
         cy.get('.cvat-move-task-label-mapper-item').within(() => {
             cy.contains(labelMappingFrom).should('exist');
-            cy.get('.cvat-move-task-label-mapper-item-select').should('be.visible').click();
+            cy.get('.cvat-move-task-label-mapper-item-select')
+                .should('be.visible')
+                .and('not.have.class', 'ant-select-disabled')
+                .click();
         });
         cy.get('.ant-select-dropdown')
             .last()

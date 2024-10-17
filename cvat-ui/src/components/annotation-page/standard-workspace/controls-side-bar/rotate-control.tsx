@@ -1,4 +1,5 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +8,7 @@ import Icon from '@ant-design/icons';
 import Popover from 'antd/lib/popover';
 
 import { RotateIcon } from 'icons';
-import { Rotation } from 'reducers/interfaces';
+import { Rotation } from 'reducers';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import withVisibilityHandling from './handle-popover-visibility';
 
@@ -42,7 +43,6 @@ function RotateControl(props: Props): JSX.Element {
                     </CVATTooltip>
                 </>
             )}
-            trigger='hover'
         >
             <Icon className='cvat-rotate-canvas-control' component={RotateIcon} />
         </CustomPopover>

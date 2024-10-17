@@ -1,4 +1,5 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2022-2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +8,7 @@ import { Col } from 'antd/lib/grid';
 import Select from 'antd/lib/select';
 import Text from 'antd/lib/typography/Text';
 
-import { StatesOrdering } from 'reducers/interfaces';
+import { StatesOrdering } from 'reducers';
 
 interface StatesOrderingSelectorComponentProps {
     statesOrdering: StatesOrdering;
@@ -19,10 +20,11 @@ function StatesOrderingSelectorComponent(props: StatesOrderingSelectorComponentP
 
     return (
         <Col>
-            <Text strong>Sort by</Text>
+            <Text>Sort by</Text>
             <Select
+                size='small'
                 className='cvat-objects-sidebar-ordering-selector'
-                dropdownClassName='cvat-objects-sidebar-ordering-dropdown'
+                popupClassName='cvat-objects-sidebar-ordering-dropdown'
                 value={statesOrdering}
                 onChange={changeStatesOrdering}
             >
@@ -34,6 +36,9 @@ function StatesOrderingSelectorComponent(props: StatesOrderingSelectorComponentP
                 </Select.Option>
                 <Select.Option key={StatesOrdering.UPDATED} value={StatesOrdering.UPDATED}>
                     {StatesOrdering.UPDATED}
+                </Select.Option>
+                <Select.Option key={StatesOrdering.Z_ORDER} value={StatesOrdering.Z_ORDER}>
+                    {StatesOrdering.Z_ORDER}
                 </Select.Option>
             </Select>
         </Col>

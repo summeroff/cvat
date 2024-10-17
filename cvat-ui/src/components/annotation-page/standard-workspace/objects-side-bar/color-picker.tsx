@@ -1,4 +1,5 @@
-// Copyright (C) 2020-2021 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
+// Copyright (C) 2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 import React, { useState } from 'react';
@@ -10,7 +11,7 @@ import Popover from 'antd/lib/popover';
 import Text from 'antd/lib/typography/Text';
 import { SketchPicker } from 'react-color';
 
-import getCore from 'cvat-core-wrapper';
+import { getCore } from 'cvat-core-wrapper';
 import CVATTooltip from 'components/common/cvat-tooltip';
 
 const core = getCore();
@@ -70,6 +71,7 @@ function ColorPicker(props: Props, ref: React.Ref<any>): JSX.Element {
                         <Col span={9}>
                             {resetVisible !== false && (
                                 <Button
+                                    className='cvat-color-picker-reset-button'
                                     onClick={() => {
                                         if (typeof onChange === 'function') onChange('');
                                         changeVisible(false);
@@ -81,6 +83,7 @@ function ColorPicker(props: Props, ref: React.Ref<any>): JSX.Element {
                         </Col>
                         <Col span={9}>
                             <Button
+                                className='cvat-color-picker-cancel-button'
                                 onClick={() => {
                                     changeVisible(false);
                                 }}
@@ -90,6 +93,7 @@ function ColorPicker(props: Props, ref: React.Ref<any>): JSX.Element {
                         </Col>
                         <Col span={6}>
                             <Button
+                                className='cvat-color-picker-submit-button'
                                 type='primary'
                                 onClick={() => {
                                     if (typeof onChange === 'function') onChange(colorState || '');
@@ -108,8 +112,9 @@ function ColorPicker(props: Props, ref: React.Ref<any>): JSX.Element {
                         <Text strong>Select color</Text>
                     </Col>
                     <Col span={4}>
-                        <CVATTooltip title='Cancel'>
+                        <CVATTooltip title='Close'>
                             <Button
+                                className='cvat-color-picker-close-button'
                                 type='link'
                                 onClick={() => {
                                     changeVisible(false);
@@ -124,8 +129,8 @@ function ColorPicker(props: Props, ref: React.Ref<any>): JSX.Element {
             placement={placement || 'left'}
             overlayClassName='cvat-label-color-picker'
             trigger='click'
-            visible={typeof visible === 'boolean' ? visible : pickerVisible}
-            onVisibleChange={changeVisible}
+            open={typeof visible === 'boolean' ? visible : pickerVisible}
+            onOpenChange={changeVisible}
         >
             {children}
         </Popover>

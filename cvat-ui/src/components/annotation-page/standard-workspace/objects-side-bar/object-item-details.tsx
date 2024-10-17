@@ -1,9 +1,11 @@
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2021-2022 Intel Corporation
+// Copyright (C) 2024 CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import React from 'react';
 import { Row } from 'antd/lib/grid';
+import Text from 'antd/lib/typography/Text';
 import Collapse from 'antd/lib/collapse';
 
 import ItemAttribute from './object-item-attribute';
@@ -47,9 +49,10 @@ function ItemAttributesComponent(props: Props): JSX.Element {
                 className='cvat-objects-sidebar-state-item-collapse'
                 activeKey={collapsed ? [] : ['details']}
                 onChange={collapse}
-            >
-                <Collapse.Panel header={<span style={{ fontSize: '11px' }}>Details</span>} key='details'>
-                    {attributes.map(
+                items={[{
+                    key: 'details',
+                    label: <Text style={{ fontSize: 10 }} type='secondary'>DETAILS</Text>,
+                    children: attributes.map(
                         (attribute: any): JSX.Element => (
                             <Row
                                 key={attribute.id}
@@ -68,9 +71,9 @@ function ItemAttributesComponent(props: Props): JSX.Element {
                                 />
                             </Row>
                         ),
-                    )}
-                </Collapse.Panel>
-            </Collapse>
+                    ),
+                }]}
+            />
         </Row>
     );
 }

@@ -46,11 +46,17 @@ or create a new project by clicking on the `+` button and select `Create New Pro
 ![](/images/image190.jpg)
 
 > Note that the project will be created in the organization that you selected at the time of creation.
-> Read more about [organizations](/docs/manual/advanced/organization/).
+> Read more about {{< ilink "/docs/manual/advanced/organization" "organizations" >}}.
 
 You can change: the name of the project, the list of labels
-(which will be used for tasks created as parts of this project) and a link to the issue.
-Learn more about [creating a label list](/docs/manual/basics/creating_an_annotation_task/#labels).
+(which will be used for tasks created as parts of this project) and a skeleton if it's necessary.
+In advanced configuration also you can specify: a link to the issue, source and target storages.
+Learn more about {{< ilink "/docs/manual/basics/create_an_annotation_task#labels" "creating a label list" >}},
+{{< ilink "/docs/manual/advanced/skeletons" "creating the skeleton" >}} and
+{{< ilink "/docs/manual/basics/attach-cloud-storage" "attach cloud storage" >}}.
+
+To save and open project click on `Submit & Open` button. Also you
+can click on `Submit & Continue` button for creating several projects in sequence
 
 ![](/images/image191.jpg)
 
@@ -63,20 +69,24 @@ Here you can do the following:
 1. Change the project's title.
 1. Open the `Actions` menu. Each button is responsible for a specific function in the `Actions` menu:
    - `Export dataset`/`Import dataset` - download/upload annotations or annotations and images in a specific format.
-     More information is available in the [export/import datasets](/docs/manual/advanced/export-import-datasets/)
+     More information is available in the {{< ilink "/docs/manual/advanced/import-datasets" "export/import datasets" >}}
      section.
-   - `Backup project` - make a backup of the project read more in the [backup](/docs/manual/advanced/backup/) section.
+   - `Backup project` - make a backup of the project read more in the
+     {{< ilink "/docs/manual/advanced/backup" "backup" >}} section.
    - `Delete` - remove the project and all related tasks.
 1. Change issue tracker or open issue tracker if it is specified.
-1. Change labels.
+1. Change labels and skeleton.
    You can add new labels or add attributes for the existing labels in the `Raw` mode or the `Constructor` mode.
-   You can also change the color for different labels. By clicking `Copy` you can copy the labels to the clipboard.
+   You can also change the color for different labels.
+   By clicking `Setup skeleton` you can create a skeleton for this project.
+
 1. Assigned to — is used to assign a project to a person.
    Start typing an assignee's name and/or choose the right person out of the dropdown list.
 1. `Tasks` — is a list of all tasks for a particular project, with the ability to search,
    sort and filter for tasks in the project.
-   [Read more about search](/docs/manual/advanced/search/).
-   [Read more about sorting and filter](/docs/manual/advanced/filter/#sort-and-filter-projects-tasks-and-jobs)
+   {{< ilink "/docs/manual/advanced/search" "Read more about search" >}}.
+   {{< ilink "/docs/manual/advanced/filter#sort-and-filter-projects-tasks-and-jobs"
+     "Read more about sorting and filter" >}}
 It is possible to choose a subset for tasks in the project. You can use the available options
 (`Train`, `Test`, `Validation`) or set your own.
 
