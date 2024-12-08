@@ -539,7 +539,9 @@ class ZipReader(ImageListReader):
 
 class _AvVideoReading:
     @contextmanager
-    def read_av_container(self, source: Union[str, io.BytesIO]) -> av.container.InputContainer:
+    def read_av_container(
+        self, source: Union[str, io.BytesIO]
+    ) -> Generator[av.container.InputContainer, None, None]:
         if isinstance(source, io.BytesIO):
             source.seek(0) # required for re-reading
 
@@ -552,6 +554,8 @@ class _AvVideoReading:
             for stream in container.streams:
                 context = stream.codec_context
                 if context and context.is_open:
+                    # Currently, context closing may get stuck on some videos for an unknown reason,
+                    # so the thread_type == 'AUTO' setting is disabled for future investigation
                     context.close()
 
             if container.open_files:
@@ -583,7 +587,7 @@ class VideoReader(IMediaReader):
         stop: Optional[int] = None,
         dimension: DimensionType = DimensionType.DIM_2D,
         *,
-        allow_threading: bool = True,
+        allow_threading: bool = False,
     ):
         super().__init__(
             source_path=source_path,
@@ -635,6 +639,8 @@ class VideoReader(IMediaReader):
 
                 if self.allow_threading:
                     video_stream.thread_type = 'AUTO'
+                else:
+                    video_stream.thread_type = 'NONE'
 
             frame_counter = itertools.count()
             with closing(self._decode_stream(container, video_stream)) as stream_decoder:
@@ -795,6 +801,8 @@ class VideoReaderWithManifest:
             video_stream = container.streams.video[0]
             if self.allow_threading:
                 video_stream.thread_type = 'AUTO'
+            else:
+                video_stream.thread_type = 'NONE'
 
             container.seek(offset=start_decode_timestamp, stream=video_stream)
 

@@ -30,6 +30,7 @@ from rest_framework.serializers import ValidationError
 
 from cvat.apps.engine import models
 from cvat.apps.engine.log import ServerLogManager
+from cvat.apps.engine.frame_provider import TaskFrameProvider
 from cvat.apps.engine.media_extractors import (
     MEDIA_TYPES, CachingMediaIterator, IMediaReader, ImageListReader,
     Mpeg4ChunkWriter, Mpeg4CompressedChunkWriter, RandomAccessIterator,
@@ -38,7 +39,7 @@ from cvat.apps.engine.media_extractors import (
 from cvat.apps.engine.models import RequestAction, RequestTarget
 from cvat.apps.engine.utils import (
     av_scan_paths, format_list,get_rq_job_meta,
-    define_dependent_job, get_rq_lock_by_user, preload_images
+    define_dependent_job, get_rq_lock_by_user, load_image
 )
 from cvat.apps.engine.rq_job_handler import RQId
 from cvat.utils.http import make_requests_session, PROXIES_FOR_UNTRUSTED_URLS
@@ -1499,6 +1500,9 @@ def _create_thread(
     ):
         _create_static_chunks(db_task, media_extractor=extractor, upload_dir=upload_dir)
 
+    # Prepare the preview image and save it in the cache
+    TaskFrameProvider(db_task=db_task).get_preview()
+
 def _create_static_chunks(db_task: models.Task, *, media_extractor: IMediaReader, upload_dir: str):
     @attrs.define
     class _ChunkProgressUpdater:
@@ -1537,7 +1541,7 @@ def _create_static_chunks(db_task: models.Task, *, media_extractor: IMediaReader
                 MEDIA_TYPES['archive']['extractor'],
             ))
         ):
-            chunk_data = preload_images(chunk_data)
+            chunk_data = list(map(load_image, chunk_data))
 
         # TODO: extract into a class
 

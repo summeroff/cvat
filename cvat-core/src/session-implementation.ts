@@ -27,7 +27,10 @@ import {
     decodePreview,
 } from './frames';
 import Issue from './issue';
-import { SerializedLabel, SerializedTask, SerializedValidationLayout } from './server-response-types';
+import {
+    SerializedLabel, SerializedTask, SerializedJobValidationLayout,
+    SerializedTaskValidationLayout,
+} from './server-response-types';
 import { checkInEnum, checkObjectType } from './common';
 import {
     getCollection, getSaver, clearAnnotations, getAnnotations,
@@ -37,7 +40,7 @@ import AnnotationGuide from './guide';
 import requestsManager from './requests-manager';
 import { Request } from './request';
 import User from './user';
-import ValidationLayout from './validation-layout';
+import { JobValidationLayout, TaskValidationLayout } from './validation-layout';
 
 // must be called with task/job context
 async function deleteFrameWrapper(jobID, frame): Promise<void> {
@@ -210,7 +213,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         ): ReturnType<typeof JobClass.prototype.validationLayout> {
             const result = await serverProxy.jobs.validationLayout(this.id);
             if (Object.keys(result).length) {
-                return new ValidationLayout(result as Required<SerializedValidationLayout>);
+                return new JobValidationLayout(result as SerializedJobValidationLayout);
             }
 
             return null;
@@ -413,7 +416,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
             }
 
             if ('annotationsFilters' in searchParameters && 'generalFilters' in searchParameters) {
-                throw new ArgumentError('Both annotations filters and general fiters could not be used together');
+                throw new ArgumentError('Both annotations filters and general filters could not be used together');
             }
 
             if (!Number.isInteger(frameFrom) || !Number.isInteger(frameTo)) {
@@ -555,6 +558,18 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
+    Object.defineProperty(Job.prototype.annotations.commit, 'implementation', {
+        value: function commitAnnotationsImplementation(
+            this: JobClass,
+            added: Parameters<typeof JobClass.prototype.annotations.commit>[0],
+            removed: Parameters<typeof JobClass.prototype.annotations.commit>[1],
+            frame: Parameters<typeof JobClass.prototype.annotations.commit>[2],
+        ): ReturnType<typeof JobClass.prototype.annotations.commit> {
+            getCollection(this).commit(added, removed, frame);
+            return Promise.resolve();
+        },
+    });
+
     Object.defineProperty(Job.prototype.annotations.upload, 'implementation', {
         value: async function uploadAnnotationsImplementation(
             this: JobClass,
@@ -680,9 +695,9 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
         value: async function validationLayoutImplementation(
             this: TaskClass,
         ): ReturnType<typeof TaskClass.prototype.validationLayout> {
-            const result = await serverProxy.tasks.validationLayout(this.id);
-            if (Object.keys(result).length) {
-                return new ValidationLayout(result as Required<SerializedValidationLayout>);
+            const result = await serverProxy.tasks.validationLayout(this.id) as SerializedTaskValidationLayout;
+            if (result.mode !== null) {
+                return new TaskValidationLayout(result);
             }
 
             return null;
@@ -792,12 +807,12 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             const { taskID, rqID } = await serverProxy.tasks.create(
                 taskSpec,
                 taskDataSpec,
-                options?.requestStatusCallback || (() => {}),
+                options?.updateStatusCallback || (() => {}),
             );
 
             await requestsManager.listen(rqID, {
                 callback: (request: Request) => {
-                    options?.requestStatusCallback(request);
+                    options?.updateStatusCallback(request);
                     if (request.status === RQStatus.FAILED) {
                         serverProxy.tasks.delete(taskID, config.organization.organizationSlug || null);
                     }
@@ -911,6 +926,14 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
         value: async function cachedChunksImplementation(
             this: TaskClass,
         ): ReturnType<typeof TaskClass.prototype.frames.cachedChunks> {
+            throw new Error('Not implemented for Task');
+        },
+    });
+
+    Object.defineProperty(Task.prototype.frames.frameNumbers, 'implementation', {
+        value: function includedFramesImplementation(
+            this: TaskClass,
+        ): ReturnType<typeof TaskClass.prototype.frames.frameNumbers> {
             throw new Error('Not implemented for Task');
         },
     });
@@ -1082,7 +1105,7 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             }
 
             if ('annotationsFilters' in searchParameters && 'generalFilters' in searchParameters) {
-                throw new ArgumentError('Both annotations filters and general fiters could not be used together');
+                throw new ArgumentError('Both annotations filters and general filters could not be used together');
             }
 
             if (!Number.isInteger(frameFrom) || !Number.isInteger(frameTo)) {
@@ -1233,6 +1256,18 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             this: TaskClass,
         ): ReturnType<typeof TaskClass.prototype.annotations.export> {
             return Promise.resolve(getCollection(this).export());
+        },
+    });
+
+    Object.defineProperty(Task.prototype.annotations.commit, 'implementation', {
+        value: function commitAnnotationsImplementation(
+            this: TaskClass,
+            added: Parameters<typeof TaskClass.prototype.annotations.commit>[0],
+            removed: Parameters<typeof TaskClass.prototype.annotations.commit>[1],
+            frame: Parameters<typeof TaskClass.prototype.annotations.commit>[2],
+        ): ReturnType<typeof TaskClass.prototype.annotations.commit> {
+            getCollection(this).commit(added, removed, frame);
+            return Promise.resolve();
         },
     });
 
