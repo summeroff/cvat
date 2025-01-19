@@ -148,7 +148,7 @@ function ReviewSummaryComponent({ jobInstance }: { jobInstance: any }): JSX.Elem
 }
 
 function JobItem(props: Props): JSX.Element {
-    const { job, task, onJobUpdate } = props;
+    const { job, task, onJobUpdate, jobDataArray, addObject } = props;
 
     const deletes = useSelector((state: CombinedState) => state.jobs.activities.deletes);
     const deleted = job.id in deletes ? deletes[job.id] === true : false;
@@ -309,6 +309,13 @@ function JobItem(props: Props): JSX.Element {
                                 }
                             </Col>
                         </Row>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col>
+                        <BorderOutlined />
+                        <Text>Objects: </Text>
+                        {<LabelingSummaryComponent jobInstance={job} jobDataArray={jobDataArray} addObject={addObject} />}
                     </Col>
                 </Row>
                 <Dropdown
@@ -535,6 +542,13 @@ function JobItemFull(props: Props): JSX.Element {
                                 }
                             </Col>
                         </Row>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col>
+                        <BorderOutlined />
+                        <Text>Objects: </Text>
+                        {<LabelingSummaryComponent jobInstance={job} jobDataArray={jobDataArray} addObject={addObject} />}
                     </Col>
                 </Row>
                 <Dropdown
