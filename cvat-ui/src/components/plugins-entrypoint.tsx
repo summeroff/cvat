@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -83,6 +83,10 @@ function PluginEntrypoint(): null {
                     });
 
                     dispatch(pluginActions.addPlugin(name, destructor, globalStateDidUpdate));
+                    window.document.dispatchEvent(new CustomEvent('plugins.registered', {
+                        detail: { name },
+                        bubbles: true,
+                    }));
                 },
             }),
         });

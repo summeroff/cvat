@@ -1,7 +1,9 @@
 # Copyright (C) 2022 Intel Corporation
-# Copyright (C) 2022-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
+
+from typing import Optional
 
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
@@ -10,10 +12,12 @@ from cvat.apps.engine.models import Project
 from cvat.apps.engine.permissions import ProjectPermission, UserPermission
 from cvat.apps.iam.permissions import OpenPolicyAgentPermission, StrEnum
 
-from .models import WebhookTypeChoice
+from .models import Webhook, WebhookTypeChoice
 
 
 class WebhookPermission(OpenPolicyAgentPermission):
+    obj: Optional[Webhook]
+
     class Scopes(StrEnum):
         CREATE = "create"
         CREATE_IN_PROJECT = "create@project"
@@ -49,9 +53,9 @@ class WebhookPermission(OpenPolicyAgentPermission):
         super().__init__(**kwargs)
         self.url = settings.IAM_OPA_DATA_URL + "/webhooks/allow"
 
-    @staticmethod
-    def get_scopes(request, view, obj):
-        Scopes = __class__.Scopes
+    @classmethod
+    def _get_scopes(cls, request, view, obj):
+        Scopes = cls.Scopes
         scope = {
             ("create", "POST"): Scopes.CREATE,
             ("destroy", "DELETE"): Scopes.DELETE,
@@ -81,16 +85,16 @@ class WebhookPermission(OpenPolicyAgentPermission):
         if self.obj:
             data = {
                 "id": self.obj.id,
-                "owner": {"id": getattr(self.obj.owner, "id", None)},
-                "organization": {"id": getattr(self.obj.organization, "id", None)},
+                "owner": {"id": self.obj.owner_id},
+                "organization": {"id": self.obj.organization_id},
                 "project": None,
             }
-            if self.obj.type == "project" and getattr(self.obj, "project", None):
-                data["project"] = {"owner": {"id": getattr(self.obj.project.owner, "id", None)}}
+            if self.obj.type == "project" and self.obj.project_id:
+                data["project"] = {"owner": {"id": self.obj.project.owner_id}}
         elif self.scope in [
-            __class__.Scopes.CREATE,
-            __class__.Scopes.CREATE_IN_PROJECT,
-            __class__.Scopes.CREATE_IN_ORG,
+            self.Scopes.CREATE,
+            self.Scopes.CREATE_IN_PROJECT,
+            self.Scopes.CREATE_IN_ORG,
         ]:
             project = None
             if self.project_id:
@@ -108,9 +112,9 @@ class WebhookPermission(OpenPolicyAgentPermission):
                     {
                         "owner": (
                             {
-                                "id": project.owner.id,
+                                "id": project.owner_id,
                             }
-                            if project.owner
+                            if project.owner_id
                             else None
                         ),
                     }

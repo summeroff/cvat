@@ -1,8 +1,13 @@
-# Copyright (C) 2023 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
+from typing import Protocol
 from uuid import uuid4
+
+
+class WithUUID(Protocol):
+    uuid: str
 
 
 class RequestTrackingMiddleware:
@@ -16,6 +21,6 @@ class RequestTrackingMiddleware:
     def __call__(self, request):
         request.uuid = self._generate_id()
         response = self.get_response(request)
-        response.headers['X-Request-Id'] = request.uuid
+        response.headers["X-Request-Id"] = request.uuid
 
         return response

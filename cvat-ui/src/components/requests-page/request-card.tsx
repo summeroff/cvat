@@ -1,4 +1,4 @@
-// Copyright (C) 2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -171,7 +171,6 @@ function RequestCard(props: Props): JSX.Element {
                 const downloadAnchor = window.document.getElementById('downloadAnchor') as HTMLAnchorElement;
                 downloadAnchor.href = request.url;
                 downloadAnchor.click();
-                dispatch(requestsActions.disableRequest(request));
             },
         });
     }

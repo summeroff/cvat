@@ -1,5 +1,5 @@
 # Copyright (C) 2022 Intel Corporation
-# Copyright (C) 2022-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -41,9 +41,9 @@ class LogViewerPermission(OpenPolicyAgentPermission):
         self.payload["input"]["auth"]["user"]["has_analytics_access"] = has_analytics_access
         self.url = settings.IAM_OPA_DATA_URL + "/analytics/allow"
 
-    @staticmethod
-    def get_scopes(request, view, obj):
-        Scopes = __class__.Scopes
+    @classmethod
+    def _get_scopes(cls, request, view, obj):
+        Scopes = cls.Scopes
         return [
             {
                 "list": Scopes.VIEW,

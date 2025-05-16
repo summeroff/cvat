@@ -1,5 +1,5 @@
-// Copyright (C) 2022 CVAT.ai Corporation
-// Copyright (C) 2023-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -12,12 +12,12 @@ import Notification from 'antd/lib/notification';
 import message from 'antd/lib/message';
 import Upload, { RcFile } from 'antd/lib/upload';
 import { InboxOutlined } from '@ant-design/icons';
-import { CombinedState, StorageLocation } from 'reducers';
+import { CombinedState } from 'reducers';
 import { importActions, importBackupAsync } from 'actions/import-actions';
 import SourceStorageField from 'components/storage/source-storage-field';
 import Input from 'antd/lib/input/Input';
 
-import { Storage, StorageData } from 'cvat-core-wrapper';
+import { Storage, StorageData, StorageLocation } from 'cvat-core-wrapper';
 
 type FormValues = {
     fileName?: string | undefined;

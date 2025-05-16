@@ -1,5 +1,5 @@
 # Copyright (C) 2020-2022 Intel Corporation
-# Copyright (C) 2022-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -53,7 +53,8 @@ from cvat.apps.engine.media_extractors import (
     ZipCompressedChunkWriter,
     load_image,
 )
-from cvat.apps.engine.rq_job_handler import RQJobMetaField
+from cvat.apps.engine.model_utils import is_field_cached
+from cvat.apps.engine.rq import RQMetaWithFailureInfo
 from cvat.apps.engine.utils import (
     CvatChunkTimestampMismatchError,
     format_list,
@@ -107,9 +108,10 @@ def wait_for_rq_job(rq_job: rq.job.Job):
         if job_status in ("finished",):
             return
         elif job_status in ("failed",):
-            job_meta = rq_job.get_meta()
-            exc_type = job_meta.get(RQJobMetaField.EXCEPTION_TYPE, Exception)
-            exc_args = job_meta.get(RQJobMetaField.EXCEPTION_ARGS, ("Cannot create chunk",))
+            rq_job.get_meta()  # refresh from Redis
+            job_meta = RQMetaWithFailureInfo.for_job(rq_job)
+            exc_type = job_meta.exc_type or Exception
+            exc_args = job_meta.exc_args or ("Cannot create chunk",)
             raise exc_type(*exc_args)
 
         time.sleep(settings.CVAT_CHUNK_CREATE_CHECK_INTERVAL)
@@ -313,7 +315,7 @@ class MediaCache:
 
     @staticmethod
     def _make_cache_key_prefix(
-        obj: Union[models.Task, models.Segment, models.Job, models.CloudStorage]
+        obj: Union[models.Task, models.Segment, models.Job, models.CloudStorage],
     ) -> str:
         if isinstance(obj, models.Task):
             return f"task_{obj.id}"
@@ -411,7 +413,11 @@ class MediaCache:
             self._make_chunk_key(db_task, chunk_number, quality=quality),
             set_callback,
         )
-        db_task.refresh_from_db(fields=["segment_set"])
+
+        if is_field_cached(db_task, "segment_set"):
+            # Refresh segments to report actual dates if they were fetched previously
+            # Doing so without a check leads to an error if the related object is not prefetched
+            db_task.refresh_from_db(fields=["segment_set"])
 
         return self._to_data_with_mime(
             self._validate_cache_item_timestamp(item, db_task.get_chunks_updated_date())

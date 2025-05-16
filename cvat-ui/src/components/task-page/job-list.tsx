@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2023-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -11,8 +11,9 @@ import { useHistory } from 'react-router';
 import { Row, Col } from 'antd/lib/grid';
 import Text from 'antd/lib/typography/Text';
 import Pagination from 'antd/lib/pagination';
-import { JobStage } from 'cvat-core/src/enums';
+import { JobStage } from 'cvat-core-wrapper';
 import Empty from 'antd/lib/empty';
+import notification from 'antd/lib/notification';
 import copy from 'copy-to-clipboard';
 import Button from 'antd/lib/button';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
@@ -33,12 +34,17 @@ const FilteringComponent = ResourceFilterHOC(
 
 interface Props {
     task: Task;
-    onJobUpdate(job: Job, data: Parameters<Job['save']>[0]): void;
+    onJobUpdate(job: Job, data: Parameters<Job['save']>[0]): Promise<void>;
+    onRefreshUI(): void;
 }
 
 const PAGE_SIZE = 10;
 function setUpJobsList(jobs: Job[], query: JobsQuery): Job[] {
     let result = jobs;
+
+    // consensus jobs will be under the collapse view
+    result = result.filter((job) => job.parentJobId === null);
+
     if (query.sort) {
         let sort = query.sort.split(',');
         const orders = sort.map((elem: string) => (elem.startsWith('-') ? 'desc' : 'asc'));
@@ -67,7 +73,7 @@ function setUpJobsList(jobs: Job[], query: JobsQuery): Job[] {
 }
 
 function JobListComponent(props: Props): JSX.Element {
-    const { task: taskInstance, onJobUpdate } = props;
+    const { task: taskInstance, onJobUpdate, onRefreshUI } = props;
     const [visibility, setVisibility] = useState(defaultVisibility);
 
     const history = useHistory();
@@ -87,14 +93,62 @@ function JobListComponent(props: Props): JSX.Element {
             updatedQuery.page = updatedQuery.page ? +updatedQuery.page : 1;
         }
     }
+
+    const [jobChildMapping, setJobChildMapping] = useState<Record<number, Job[]>>({});
+    useEffect(() => {
+        if (taskInstance.consensusEnabled) {
+            const mapping = jobs.reduce((acc, job) => {
+                if (job.parentJobId === null && !acc[job.id]) {
+                    acc[job.id] = [];
+                } else if (job.parentJobId !== null) {
+                    if (!acc[job.parentJobId]) {
+                        acc[job.parentJobId] = [];
+                    }
+                    acc[job.parentJobId].push(job);
+                }
+                return acc;
+            }, {} as Record<number, Job[]>);
+            setJobChildMapping(mapping);
+        }
+    }, [taskInstance]);
+
+    const [uncollapsedJobs, setUncollapsedJobs] = useState<Record<number, boolean>>({});
+    useEffect(() => {
+        const savedState = localStorage.getItem('uncollapsedJobs');
+        if (savedState) {
+            setUncollapsedJobs(JSON.parse(savedState));
+        }
+    }, []);
+    const onCollapseChange = useCallback((jobId: number) => {
+        setUncollapsedJobs((prevState) => {
+            const newState = { ...prevState };
+            newState[jobId] = !prevState[jobId];
+
+            localStorage.setItem('uncollapsedJobs', JSON.stringify(newState));
+            return newState;
+        });
+    }, []);
+
     const [jobDataArray, setJobDataArray] = useState<JobData[]>([]);
 
-    const renewAllJobs = (): void => {
+    const renewAllJobs = async (): Promise<void> => {
         const core = getCore();
-        for (const job of taskInstance.jobs) {
+        const updateData = { state: core.enums.JobState.NEW, stage: JobStage.ANNOTATION };
+        const promises = taskInstance.jobs.map((job: Job) => {
             if (job.state !== core.enums.JobState.NEW || job.stage !== JobStage.ANNOTATION) {
-                onJobUpdate(job, {state: core.enums.JobState.NEW, stage: JobStage.ANNOTATION});
+                return onJobUpdate(job, updateData);
             }
+            return Promise.resolve();
+        });
+
+        try {
+            await Promise.all(promises);
+            onRefreshUI();
+        } catch (error: unknown) {
+            notification.error({
+                message: 'Failed to renew all jobs',
+                description: String(error),
+            });
         }
     };
 
@@ -106,7 +160,19 @@ function JobListComponent(props: Props): JSX.Element {
     const filteredJobs = setUpJobsList(jobs, query);
     const jobViews = filteredJobs
         .slice((query.page - 1) * PAGE_SIZE, query.page * PAGE_SIZE)
-        .map((job: Job) => <JobItem key={job.id} job={job} task={taskInstance} onJobUpdate={onJobUpdate} jobDataArray={jobDataArray} addObject={addObject}/>);
+        .map((job: Job) => (
+            <JobItem
+                key={job.id}
+                job={job}
+                task={taskInstance}
+                onJobUpdate={onJobUpdate}
+                childJobs={jobChildMapping[job.id] || []}
+                defaultCollapsed={!uncollapsedJobs[job.id]}
+                onCollapseChange={onCollapseChange}
+                jobDataArray={jobDataArray}
+                addObject={addObject}
+            />
+        ));
     useEffect(() => {
         history.replace({
             search: updateHistoryFromQuery(query),

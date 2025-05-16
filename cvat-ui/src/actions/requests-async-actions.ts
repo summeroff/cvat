@@ -1,11 +1,11 @@
-// Copyright (C) 2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import { ThunkAction } from 'utils/redux';
-import { CombinedState, RequestsQuery, StorageLocation } from 'reducers';
+import { CombinedState, RequestsQuery } from 'reducers';
 import {
-    getCore, RQStatus, Request, Project, Task, Job,
+    getCore, RQStatus, Request, Project, Task, Job, StorageLocation,
 } from 'cvat-core-wrapper';
 import { listenExportBackupAsync, listenExportDatasetAsync } from './export-actions';
 import {

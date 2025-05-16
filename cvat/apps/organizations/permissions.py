@@ -1,5 +1,5 @@
 # Copyright (C) 2022 Intel Corporation
-# Copyright (C) 2022-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -32,9 +32,9 @@ class OrganizationPermission(OpenPolicyAgentPermission):
         super().__init__(**kwargs)
         self.url = settings.IAM_OPA_DATA_URL + "/organizations/allow"
 
-    @staticmethod
-    def get_scopes(request, view, obj):
-        Scopes = __class__.Scopes
+    @classmethod
+    def _get_scopes(cls, request, view, obj):
+        Scopes = cls.Scopes
         return [
             {
                 "list": Scopes.LIST,
@@ -50,10 +50,10 @@ class OrganizationPermission(OpenPolicyAgentPermission):
             membership = Membership.objects.filter(organization=self.obj, user=self.user_id).first()
             return {
                 "id": self.obj.id,
-                "owner": {"id": getattr(self.obj.owner, "id", None)},
+                "owner": {"id": self.obj.owner_id},
                 "user": {"role": membership.role if membership else None},
             }
-        elif self.scope.startswith(__class__.Scopes.CREATE.value):
+        elif self.scope.startswith(self.Scopes.CREATE.value):
             return {"id": None, "owner": {"id": self.user_id}, "user": {"role": "owner"}}
         else:
             return None
@@ -86,9 +86,9 @@ class InvitationPermission(OpenPolicyAgentPermission):
         self.role = kwargs.get("role")
         self.url = settings.IAM_OPA_DATA_URL + "/invitations/allow"
 
-    @staticmethod
-    def get_scopes(request, view, obj):
-        Scopes = __class__.Scopes
+    @classmethod
+    def _get_scopes(cls, request, view, obj):
+        Scopes = cls.Scopes
         return [
             {
                 "list": Scopes.LIST,
@@ -108,12 +108,12 @@ class InvitationPermission(OpenPolicyAgentPermission):
         data = None
         if self.obj:
             data = {
-                "owner": {"id": getattr(self.obj.owner, "id", None)},
-                "invitee": {"id": getattr(self.obj.membership.user, "id", None)},
+                "owner": {"id": self.obj.owner_id},
+                "invitee": {"id": self.obj.membership.user_id},
                 "role": self.obj.membership.role,
-                "organization": {"id": self.obj.membership.organization.id},
+                "organization": {"id": self.obj.membership.organization_id},
             }
-        elif self.scope.startswith(__class__.Scopes.CREATE.value):
+        elif self.scope.startswith(self.Scopes.CREATE.value):
             data = {
                 "owner": {"id": self.user_id},
                 "invitee": {"id": None},  # unknown yet
@@ -150,9 +150,9 @@ class MembershipPermission(OpenPolicyAgentPermission):
         super().__init__(**kwargs)
         self.url = settings.IAM_OPA_DATA_URL + "/memberships/allow"
 
-    @staticmethod
-    def get_scopes(request, view, obj):
-        Scopes = __class__.Scopes
+    @classmethod
+    def _get_scopes(cls, request, view, obj):
+        Scopes = cls.Scopes
         scopes = []
 
         scope = {
@@ -164,7 +164,7 @@ class MembershipPermission(OpenPolicyAgentPermission):
 
         if scope == Scopes.UPDATE:
             scopes.extend(
-                __class__.get_per_field_update_scopes(
+                cls.get_per_field_update_scopes(
                     request,
                     {
                         "role": Scopes.UPDATE_ROLE,
@@ -181,8 +181,8 @@ class MembershipPermission(OpenPolicyAgentPermission):
             return {
                 "role": self.obj.role,
                 "is_active": self.obj.is_active,
-                "user": {"id": self.obj.user.id},
-                "organization": {"id": self.obj.organization.id},
+                "user": {"id": self.obj.user_id},
+                "organization": {"id": self.obj.organization_id},
             }
         else:
             return None

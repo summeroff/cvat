@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -22,8 +22,10 @@ import {
     changeFrameAsync,
     rememberObject,
 } from 'actions/annotation-actions';
-import { getCore, Label, LabelType } from 'cvat-core-wrapper';
-import { CombinedState, ObjectType } from 'reducers';
+import {
+    getCore, Label, LabelType, ObjectType,
+} from 'cvat-core-wrapper';
+import { CombinedState } from 'reducers';
 import { filterApplicableForType } from 'utils/filter-applicable-labels';
 import LabelSelector from 'components/label-selector/label-selector';
 import isAbleToChangeFrame from 'utils/is-able-to-change-frame';

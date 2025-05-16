@@ -1,10 +1,10 @@
-// Copyright (C) 2023-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
 import { getCVATStore } from 'cvat-store';
-import { CombinedState, ObjectType, Workspace } from 'reducers';
-import { ObjectState } from 'cvat-core-wrapper';
+import { CombinedState, Workspace } from 'reducers';
+import { ObjectState, ObjectType } from 'cvat-core-wrapper';
 
 export interface FilterAnnotationsParams {
     workspace: Workspace;

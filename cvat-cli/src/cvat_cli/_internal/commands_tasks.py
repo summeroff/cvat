@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -419,7 +419,7 @@ class TaskAutoAnnotate:
         parser.add_argument(
             "--allow-unmatched-labels",
             action="store_true",
-            help="Allow the function to declare labels not configured in the task",
+            help="Allow the function to declare labels/sublabels/attributes not configured in the task",
         )
 
         parser.add_argument(

@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -11,14 +11,12 @@ import Text from 'antd/lib/typography/Text';
 import Paragraph from 'antd/lib/typography/Paragraph';
 import Collapse from 'antd/lib/collapse';
 import TextArea from 'antd/lib/input/TextArea';
-import ErrorStackParser from 'error-stack-parser';
 
 import { ThunkDispatch } from 'utils/redux';
 import { resetAfterErrorAsync } from 'actions/boundaries-actions';
 import { CombinedState } from 'reducers';
-import logger, { EventScope } from 'cvat-logger';
+import { logError } from 'cvat-logger';
 import config from 'config';
-import { saveLogsAsync } from 'actions/annotation-actions';
 
 interface OwnProps {
     children: JSX.Element;
@@ -32,7 +30,6 @@ interface StateToProps {
 
 interface DispatchToProps {
     restore(): void;
-    saveLogs(): void;
 }
 
 interface State {
@@ -57,9 +54,6 @@ function mapStateToProps(state: CombinedState): StateToProps {
 
 function mapDispatchToProps(dispatch: ThunkDispatch): DispatchToProps {
     return {
-        saveLogs(): void {
-            dispatch(saveLogsAsync());
-        },
         restore(): void {
             dispatch(resetAfterErrorAsync());
         },
@@ -84,23 +78,10 @@ class GlobalErrorBoundary extends React.PureComponent<Props, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-        const { job, saveLogs } = this.props;
-        const parsed = ErrorStackParser.parse(error);
-
-        const logPayload = {
-            filename: parsed[0].fileName,
-            line: parsed[0].lineNumber,
-            message: error.message,
-            column: parsed[0].columnNumber,
-            stack: error.stack,
+        logError(error, true, {
+            type: 'component',
             componentStack: errorInfo.componentStack,
-        };
-
-        if (job) {
-            job.logger.log(EventScope.exception, logPayload).then(saveLogs);
-        } else {
-            logger.log(EventScope.exception, logPayload).then(saveLogs);
-        }
+        });
     }
 
     public render(): React.ReactNode {

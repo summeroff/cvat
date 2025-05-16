@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -15,8 +15,10 @@ import {
     BackgroundIcon, ForegroundIcon, ResetPerspectiveIcon, ColorizeIcon, SliceIcon,
 } from 'icons';
 import CVATTooltip from 'components/common/cvat-tooltip';
-import { ObjectType, ShapeType, ColorBy } from 'reducers';
-import { DimensionType, Job } from 'cvat-core-wrapper';
+import { ColorBy } from 'reducers';
+import {
+    DimensionType, Job, ObjectType, ShapeType,
+} from 'cvat-core-wrapper';
 
 interface Props {
     readonly: boolean;

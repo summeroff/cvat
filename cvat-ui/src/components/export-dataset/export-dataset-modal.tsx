@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -18,10 +18,10 @@ import Switch from 'antd/lib/switch';
 import Space from 'antd/lib/space';
 import TargetStorageField from 'components/storage/target-storage-field';
 import CVATMarkdown from 'components/common/cvat-markdown';
-import { CombinedState, StorageLocation } from 'reducers';
+import { CombinedState } from 'reducers';
 import { exportActions, exportDatasetAsync } from 'actions/export-actions';
 import {
-    Dumper, ProjectOrTaskOrJob, Job, Project, Storage, StorageData, Task,
+    Dumper, ProjectOrTaskOrJob, Job, Project, Storage, StorageData, StorageLocation, Task,
 } from 'cvat-core-wrapper';
 
 type FormValues = {

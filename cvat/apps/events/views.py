@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -14,6 +14,7 @@ from cvat.apps.events.permissions import EventsPermission
 from cvat.apps.events.serializers import ClientEventsSerializer
 from cvat.apps.iam.filters import ORGANIZATION_OPEN_API_PARAMETERS
 
+from .const import USER_ACTIVITY_SCOPE
 from .export import export
 from .handlers import handle_client_events_push
 
@@ -37,6 +38,10 @@ class EventsViewSet(viewsets.ViewSet):
 
         handle_client_events_push(request, serializer.validated_data)
         for event in serializer.validated_data["events"]:
+            if event["scope"] == USER_ACTIVITY_SCOPE:
+                # do not record these events, we only need them for correct working time computation
+                continue
+
             message = (
                 JSONRenderer()
                 .render({**event, "timestamp": str(event["timestamp"].timestamp())})
@@ -91,14 +96,14 @@ class EventsViewSet(viewsets.ViewSet):
                 location=OpenApiParameter.QUERY,
                 type=OpenApiTypes.DATETIME,
                 required=False,
-                description="Filter events after the datetime. If no 'from' or 'to' parameters are passed, the last 30 days will be set.",
+                description="UTC start date for events filtration. Default is the minimal time.",
             ),
             OpenApiParameter(
                 "to",
                 location=OpenApiParameter.QUERY,
                 type=OpenApiTypes.DATETIME,
                 required=False,
-                description="Filter events before the datetime. If no 'from' or 'to' parameters are passed, the last 30 days will be set.",
+                description="UTC end date for events filtration. Default is the current time.",
             ),
             OpenApiParameter(
                 "filename",

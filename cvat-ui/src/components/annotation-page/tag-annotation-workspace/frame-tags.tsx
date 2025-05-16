@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Intel Corporation
-// Copyright (C) 2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -12,8 +12,8 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import {
     removeObject as removeObjectAction,
 } from 'actions/annotation-actions';
-import { CombinedState, ObjectType } from 'reducers';
-import { ObjectState, AnnotationConflict } from 'cvat-core-wrapper';
+import { CombinedState } from 'reducers';
+import { AnnotationConflict, ObjectState, ObjectType } from 'cvat-core-wrapper';
 import { filterAnnotations } from 'utils/filter-annotations';
 
 function FrameTags(): JSX.Element {

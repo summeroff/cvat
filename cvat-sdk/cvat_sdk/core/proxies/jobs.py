@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2023 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -49,6 +49,7 @@ class Job(
         format_name: str,
         filename: StrPath,
         *,
+        conv_mask_to_poly: Optional[bool] = None,
         status_check_period: Optional[int] = None,
         pbar: Optional[ProgressReporter] = None,
     ):
@@ -62,6 +63,7 @@ class Job(
             self.api.create_annotations_endpoint,
             filename,
             format_name,
+            conv_mask_to_poly=conv_mask_to_poly,
             url_params={"id": self.id},
             pbar=pbar,
             status_check_period=status_check_period,

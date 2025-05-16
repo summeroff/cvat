@@ -1,7 +1,3 @@
-// Copyright (C) 2023-2024 CVAT.ai Corporation
-//
-// SPDX-License-Identifier: MIT
-
 @import 'base';
 
 .cvat-job-item {
@@ -71,15 +67,34 @@
     .cvat-job-item-dates-info {
         margin-top: $grid-unit-size;
     }
+
+    .cvat-consensus-job-collapse {
+        margin-top: $grid-unit-size * 1.5;
+
+        .ant-collapse-item > .ant-collapse-header {
+            align-items: center;
+        }
+    }
+
+    .job-actions-menu {
+        position: absolute;
+        top: $grid-unit-size * 6.5;
+    }
 }
 
-.cvat-job-compact-item {
+.cvat-job-item-compact {
     border: 1px solid $border-color-1;
-    border-radius: 3px;
+    border-radius: $border-radius-base;
+    margin-bottom: $grid-unit-size;
     background: $background-color-1;
 
+    .cvat-job-item-issues-summary-icon {
+        margin-left: $grid-unit-size / 2;
+    }
+
     &:hover {
-        border: 1px solid $border-color-hover;
+        transition: box-shadow $box-shadow-transition;
+        box-shadow: $box-shadow-base;
     }
 
     .cvat-job-item-icon {
@@ -89,52 +104,78 @@
     }
 
     .ant-card-body {
-        padding: calc($grid-unit-size / 2);  // Reduced padding from 2x to 1x
-        min-height: $grid-unit-size * 5;  // Reduced min-height slightly
+        padding: $grid-unit-size / 2;
+        min-height: auto;
     }
 
     .cvat-job-item-selects {
-        padding-top: calc($grid-unit-size / 2);  // Reduced padding-top by half
-
         .cvat-job-item-select {
-            >div:first-child {
-                margin-bottom: calc($grid-unit-size / 2);  // Reduced margin-bottom by half
+            width: $grid-unit-size * 12;
+
+            > :first-child {
+                margin-bottom: $grid-unit-size / 2;
             }
 
-            .anticon {
-                margin: $grid-unit-size;
+            .ant-select {
+                width: 100%;
             }
         }
 
-        .cvat-job-assignee-selector {
-            margin-right: $grid-unit-size;
+        .cvat-job-item-select:not(:last-child) {
+            margin-right: $grid-unit-size / 2;
         }
     }
 
     .cvat-job-item-details {
-        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
+        .ant-row {
+            margin-top: $grid-unit-size / 2;
+        }
+
+        .anticon {
+            margin-right: $grid-unit-size / 2;
+        }
     }
 
     .cvat-job-item-more-button {
-        position: absolute;
-        right: 0;
-        top: 50%;
-        transform: translateY(-100%);
+        position: relative;
         font-size: 16px;
-        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
-        padding: 0 $grid-unit-size;
+        padding: 0;
+        line-height: 1; /* Ensure vertical alignment */
     }
 
     .cvat-job-item-dates-info {
-        margin-top: calc($grid-unit-size / 2);  // Reduced margin-top by half
+        margin-top: $grid-unit-size / 2;
     }
 
-    .cvat-job-assignee-selector {
-        max-width: $grid-unit-size * 14;  // Reduced max-width slightly
+    .cvat-consensus-job-collapse {
+        margin-top: $grid-unit-size;
 
-        @media screen and (max-width: 1620px) {
-            max-width: $grid-unit-size * 10;  // Reduced max-width for smaller screens
+        .ant-collapse-item > .ant-collapse-header {
+            align-items: center;
         }
+    }
+
+    .cvat-job-item-frames,
+    .cvat-job-item-frame-range,
+    .cvat-job-item-objects {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .job-actions-menu {
+        position: relative; /* Changed to relative to stay in row flow */
+        top: 0; /* Reset top positioning */
+        display: inline-block; /* Ensure it behaves as an inline element */
+    }
+
+    .ant-row {
+        flex-wrap: nowrap; /* Prevent row wrapping */
+        align-items: center; /* Vertically center all items */
+    }
+
+    .ant-col {
+        overflow: hidden; /* Prevent content from overflowing columns */
     }
 }
 

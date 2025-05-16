@@ -1,5 +1,5 @@
 // Copyright (C) 2019-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -23,7 +23,6 @@ import {
     findFrame,
     getContextImage,
     patchMeta,
-    getDeletedFrames,
     decodePreview,
 } from './frames';
 import Issue from './issue';
@@ -130,7 +129,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
-    Object.defineProperty(Job.prototype, 'objects', {
+    Object.defineProperty(Job.prototype.objects, 'implementation', {
         value: async function objectsImplementation(): Promise<{ objects: number, attributes: number, per_label: { [key: string]: any } }> {
             const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
 
@@ -138,7 +137,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
 
             for (const shape of rawAnnotations.shapes) {
                 if (!labels[shape.label_id]) {
-                    labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: "", true_attributes_sums: {} };
+                    labels[shape.label_id] = { objects: 0, attributes: 0, true_attributes: 0, label_name: '', true_attributes_sums: {} };
                 }
 
                 labels[shape.label_id].objects++;
@@ -149,7 +148,7 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
                     const value = attribute.value;
 
                     if (!labels[shape.label_id].true_attributes_sums[spec_id]) {
-                        labels[shape.label_id].true_attributes_sums[spec_id] = { count: 0, name: "" };
+                        labels[shape.label_id].true_attributes_sums[spec_id] = { count: 0, name: '' };
                     }
 
                     if (value === 'true') {
@@ -391,11 +390,6 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
             }
 
             const annotationsData = await getAnnotations(this, frame, allTracks, filters);
-            const deletedFrames = await getDeletedFrames('job', this.id);
-            if (frame in deletedFrames) {
-                return [];
-            }
-
             return annotationsData;
         },
     });
@@ -661,6 +655,14 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
+    Object.defineProperty(Job.prototype.mergeConsensusJobs, 'implementation', {
+        value: function mergeConsensusJobsImplementation(
+            this: JobClass,
+        ): ReturnType<typeof JobClass.prototype.mergeConsensusJobs> {
+            return serverProxy.jobs.mergeConsensusJobs(this.id, 'job');
+        },
+    });
+
     return Job;
 }
 
@@ -787,6 +789,10 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
                 taskSpec.source_storage = this.sourceStorage.toJSON();
             }
 
+            if (fields.consensus_replicas) {
+                taskSpec.consensus_replicas = fields.consensus_replicas;
+            }
+
             const taskDataSpec = {
                 client_files: this.clientFiles,
                 server_files: this.serverFiles,
@@ -855,6 +861,14 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             this: TaskClass,
         ): ReturnType<typeof TaskClass.prototype.delete> {
             return serverProxy.tasks.delete(this.id);
+        },
+    });
+
+    Object.defineProperty(Task.prototype.mergeConsensusJobs, 'implementation', {
+        value: function mergeConsensusJobsImplementation(
+            this: TaskClass,
+        ): ReturnType<typeof TaskClass.prototype.mergeConsensusJobs> {
+            return serverProxy.tasks.mergeConsensusJobs(this.id, 'task');
         },
     });
 
@@ -1080,11 +1094,6 @@ export function implementTask(Task: typeof TaskClass): typeof TaskClass {
             }
 
             const result = await getAnnotations(this, frame, allTracks, filters);
-            const deletedFrames = await getDeletedFrames('task', this.id);
-            if (frame in deletedFrames) {
-                return [];
-            }
-
             return result;
         },
     });

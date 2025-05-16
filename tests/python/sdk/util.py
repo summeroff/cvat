@@ -1,4 +1,4 @@
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -33,6 +33,8 @@ def generate_coco_anno(image_path: str, image_width: int, image_height: int) -> 
         textwrap.dedent(
             """
     {
+        "licenses": [],
+        "info": {},
         "categories": [
             {
                 "id": 1,

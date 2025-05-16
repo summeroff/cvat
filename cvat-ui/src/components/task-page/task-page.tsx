@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -100,9 +100,13 @@ function TaskPageComponent(): JSX.Element {
         })
     );
 
-    const onJobUpdate = (job: Job, data: Parameters<Job['save']>[0]): void => {
+    const onRefreshUI = (): void => {
+        setTaskInstance({ ...taskInstance, jobs: [...taskInstance.jobs] });
+    };
+
+    const onJobUpdate = (job: Job, data: Parameters<Job['save']>[0]): Promise<void> => {
         setUpdatingTask(true);
-        dispatch(updateJobAsync(job, data)).then(() => {
+    return dispatch(updateJobAsync(job, data)).then(() => {
             // if one of jobs changes, task will have its updated_date bumped
             // but generally we do not use this field anywhere on the page
             // so, as a kind of optimization we do not fetch the task again
@@ -113,6 +117,7 @@ function TaskPageComponent(): JSX.Element {
                 message: 'Could not update the job',
                 description: error.toString(),
             });
+            throw error;
         });
     };
 
@@ -127,7 +132,7 @@ function TaskPageComponent(): JSX.Element {
                 <Col span={22} xl={18} xxl={14}>
                     <TopBarComponent taskInstance={taskInstance} />
                     <DetailsComponent task={taskInstance} onUpdateTask={onUpdateTask} />
-                    <JobListComponent task={taskInstance} onJobUpdate={onJobUpdate} />
+                    <JobListComponent task={taskInstance} onJobUpdate={onJobUpdate} onRefreshUI={onRefreshUI} />
                 </Col>
             </Row>
             <ModelRunnerModal />

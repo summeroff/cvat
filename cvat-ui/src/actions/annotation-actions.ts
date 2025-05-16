@@ -1,5 +1,5 @@
 // Copyright (C) 2020-2022 Intel Corporation
-// Copyright (C) 2022-2024 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -12,7 +12,7 @@ import {
 } from 'cvat-canvas-wrapper';
 import {
     getCore, MLModel, JobType, Job, QualityConflict,
-    ObjectState, JobState, JobStage, JobValidationLayout,
+    ObjectState, ObjectType, ShapeType, JobState, JobStage, JobValidationLayout,
 } from 'cvat-core-wrapper';
 import logger, { EventScope } from 'cvat-logger';
 import { getCVATStore } from 'cvat-store';
@@ -23,10 +23,8 @@ import {
     ContextMenuType,
     FrameSpeed,
     NavigationType,
-    ObjectType,
     OpenCVTool,
     Rotation,
-    ShapeType,
     Workspace,
 } from 'reducers';
 import { switchToolsBlockerState } from './settings-actions';

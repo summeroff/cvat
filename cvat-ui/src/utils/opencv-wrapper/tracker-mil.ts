@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Intel Corporation
-// Copyright (C) 2025 CVAT.ai Corporation
+// Copyright (C) CVAT.ai Corporation
 //
 // SPDX-License-Identifier: MIT
 
@@ -20,7 +20,7 @@ export default class TrackerMILImplementation implements TrackerMIL {
         this.cv = cv;
         this.trackerMIL = new cv.TrackerMIL();
         this.imageData = null;
-        this.maxSize = 2560;
+        this.maxSize = 1080;
         this.imageScale = 1;
         this.name = 'TrackerMIL';
     }
