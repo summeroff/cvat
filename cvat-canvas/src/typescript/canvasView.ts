@@ -1597,7 +1597,7 @@ export class CanvasViewImpl implements CanvasView, Listener {
         // Setup grid
         this.grid.setAttribute('id', 'cvat_canvas_grid');
         this.grid.setAttribute('version', '2');
-        this.gridPath.setAttribute('d', 'M 1000 0 L 0 0 0 1000');
+        this.gridPath.setAttribute('d', 'M 3000 0 L 0 0 0 3000');
         this.gridPath.setAttribute('fill', 'none');
         this.gridPath.setAttribute('stroke-width', `${consts.BASE_GRID_WIDTH}`);
         this.gridPath.setAttribute('opacity', 'inherit');
@@ -1984,9 +1984,31 @@ export class CanvasViewImpl implements CanvasView, Listener {
         } else if (reason === UpdateReasons.ISSUE_REGIONS_UPDATED) {
             this.setupIssueRegions(this.controller.issueRegions);
         } else if (reason === UpdateReasons.GRID_UPDATED) {
-            const size: Size = this.geometry.grid;
-            this.gridPattern.setAttribute('width', `${size.width}`);
-            this.gridPattern.setAttribute('height', `${size.height}`);
+            const gridSize: Size = this.geometry.grid;
+            const imageSize: Size = this.geometry.image;
+
+            if (gridSize.width === 5) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 1;
+            } else if (gridSize.width === 6) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 2;
+            } else if (gridSize.width === 7) {
+                gridSize.width = imageSize.width / 2;
+                gridSize.height = imageSize.height / 3;
+            } else if (gridSize.width === 8) {
+                gridSize.width = imageSize.width / 3;
+                gridSize.height = imageSize.height / 3;
+            } else if (gridSize.width === 9) {
+                gridSize.width = imageSize.width / 3;
+                gridSize.height = imageSize.height / 4;
+            } else if (gridSize.width === 10) {
+                gridSize.width = imageSize.width / 4;
+                gridSize.height = imageSize.height / 4;
+            }
+
+            this.gridPattern.setAttribute('width', `${gridSize.width}`);
+            this.gridPattern.setAttribute('height', `${gridSize.height}`);
         } else if (reason === UpdateReasons.SHAPE_FOCUSED) {
             const padding = this.configuration.focusedObjectPadding ?? 0;
             const { clientID } = this.controller.focusData;
