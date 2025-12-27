@@ -16,6 +16,7 @@ import Card from 'antd/lib/card';
 import Text from 'antd/lib/typography/Text';
 import Icon from '@ant-design/icons';
 import {
+    BlockOutlined,
     BorderOutlined,
     LoadingOutlined, MoreOutlined, QuestionCircleOutlined,
 } from '@ant-design/icons/lib/icons';
@@ -370,26 +371,18 @@ function JobItem(props: Readonly<Props>): JSX.Element {
                             <Row>
                                 <Col>
                                     <BorderOutlined />
-                                    <Text>Frame count: </Text>
+                                    <Text>Frames: </Text>
                                     <Text type='secondary' className='cvat-job-item-frames'>
-                                        {`${job.frameCount} (${frameCountPercentRepresentation}%)`}
+                                        {job.type !== JobType.GROUND_TRUTH ?
+                                            `${job.frameCount} (${frameCountPercentRepresentation}%) [${job.startFrame}-${job.stopFrame}]` :
+                                            `${job.frameCount} (${frameCountPercentRepresentation}%)`}
                                     </Text>
                                 </Col>
                             </Row>
-                            {job.type !== JobType.GROUND_TRUTH && (
-                                <Row>
-                                    <Col>
-                                        <Icon component={FramesIcon} />
-                                        <Text>Frame range: </Text>
-                                        <Text type='secondary' className='cvat-job-item-frame-range'>
-                                            {`${job.startFrame}-${job.stopFrame}`}
-                                        </Text>
-                                    </Col>
-                                </Row>
-                            )}
                             {jobDataArray && addObject && (
                                 <Row>
                                     <Col>
+                                        <BlockOutlined />
                                         <Text>Objects: </Text>
                                         <LabelingSummaryComponent
                                             jobInstance={job}
