@@ -36,6 +36,110 @@ function formatDate(value: Dayjs): string {
     return value.format('MMM Do YYYY HH:mm');
 }
 
+export interface LabelObjects {
+    [key: string]: {
+        objects: number;
+        attributes: number;
+        true_attributes: number;
+        label_name?: string;
+        true_attributes_sums: { [id: string]: { count: number; name: string } };
+    };
+}
+
+export interface JobData {
+    jobId: number;
+    objectsCount: number;
+    attributesCount: number;
+    attributesPerLabel: LabelObjects;
+}
+
+function updateLabelNameInObjects(jobInstance: Job, objects: LabelObjects): void {
+    for (const label of jobInstance.labels) {
+        const id: string = label.id.toString();
+        if (objects[id]) {
+            objects[id].label_name = label.name;
+        } else {
+            objects[id] = {
+                objects: 0,
+                attributes: 0,
+                true_attributes: 0,
+                label_name: label.name,
+                true_attributes_sums: {},
+            };
+        }
+        for (const attr of label.attributes) {
+            if (attr.inputType === 'checkbox') {
+                if (typeof objects[id].true_attributes_sums[attr.id] === 'object') {
+                    objects[id].true_attributes_sums[attr.id].name = attr.name;
+                } else {
+                    objects[id].true_attributes_sums[attr.id] = { count: 0, name: attr.name };
+                }
+            } else {
+                delete objects[id].true_attributes_sums[attr.id];
+            }
+        }
+    }
+}
+
+function LabelingSummaryComponent({
+    jobInstance,
+    addObject,
+}: Readonly<{
+    jobInstance: Job;
+    addObject?: (newData: JobData) => void;
+}>): JSX.Element {
+    const [summary, setSummary] = useState<Record<string, any> | null>(null);
+    const [error, setError] = useState<any>(null);
+    const isMounted = useIsMounted();
+
+    useEffect(() => {
+        setError(null);
+        jobInstance
+            .objects()
+            .then((objects: any) => {
+                if (isMounted()) {
+                    setSummary({ objects });
+                    updateLabelNameInObjects(jobInstance, objects.per_label);
+                    if (addObject) {
+                        const newData: JobData = {
+                            jobId: jobInstance.id,
+                            objectsCount: objects.objects,
+                            attributesCount: objects.attributes,
+                            attributesPerLabel: JSON.parse(JSON.stringify(objects.per_label)),
+                        };
+                        addObject(newData);
+                    }
+                }
+            })
+            .catch((_error: any) => {
+                if (isMounted()) {
+                    // eslint-disable-next-line
+                    console.log(_error);
+                    setError(_error);
+                }
+            });
+    }, []);
+
+    if (!summary) {
+        if (error) {
+            if (error.toString().includes('403')) {
+                return <Text type='secondary'>No permissions</Text>;
+            }
+            return <Text type='secondary'>Error loading</Text>;
+        }
+        return (
+            <>
+                <Text type='secondary'>Loading... </Text>
+                <LoadingOutlined />
+            </>
+        );
+    }
+
+    return (
+        <Text type='secondary'>{summary.objects.objects} / {summary.objects.attributes}</Text>
+    );
+}
+
 interface Props {
     job: Job;
     task: Task;
@@ -45,6 +149,8 @@ interface Props {
     onCollapseChange?: (jobID: number, collapsed: boolean) => void;
     selected?: boolean;
     onClick?: (event?: React.MouseEvent) => void;
+    jobDataArray?: JobData[];
+    addObject?: (newData: JobData) => void;
 }
 
 function ReviewSummaryComponent({ jobInstance }: Readonly<{ jobInstance: Job }>): JSX.Element {
@@ -113,6 +219,7 @@ function ReviewSummaryComponent({ jobInstance }: Readonly<{ jobInstance: Job }>)
 function JobItem(props: Readonly<Props>): JSX.Element {
     const {
         job, task, onJobUpdate, childJobs, defaultCollapsed, onCollapseChange, selected, onClick,
+        jobDataArray, addObject,
     } = props;
 
     const deletes = useSelector((state: CombinedState) => state.jobs.activities.deletes);
@@ -277,6 +384,17 @@ function JobItem(props: Readonly<Props>): JSX.Element {
                                         <Text type='secondary' className='cvat-job-item-frame-range'>
                                             {`${job.startFrame}-${job.stopFrame}`}
                                         </Text>
+                                    </Col>
+                                </Row>
+                            )}
+                            {jobDataArray && addObject && (
+                                <Row>
+                                    <Col>
+                                        <Text>Objects: </Text>
+                                        <LabelingSummaryComponent
+                                            jobInstance={job}
+                                            addObject={addObject}
+                                        />
                                     </Col>
                                 </Row>
                             )}

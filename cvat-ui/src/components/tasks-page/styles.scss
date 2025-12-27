@@ -137,6 +137,14 @@
     color: $annotation-progress-color;
 }
 
+.cvat-task-rejected-progress {
+    color: $rejected-progress-color;
+}
+
+.cvat-task-rejected-progress div.ant-progress-bg {
+    background: $rejected-progress-color !important;
+}
+
 .cvat-task-item-progress-wrapper {
     > div:first-child {
         margin-bottom: -$grid-unit-size;

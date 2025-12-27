@@ -186,6 +186,11 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
         const numOfValidation = taskInstance.progress.validationJobs;
         const numOfAnnotation = taskInstance.progress.annotationJobs;
 
+        const numOfFinished = taskInstance.stateProgress?.finished || 0;
+        const numOfInProgress = taskInstance.stateProgress?.inprogress || 0;
+        const numOfRejected = taskInstance.stateProgress?.rejected || 0;
+        const numOfNew = taskInstance.stateProgress?.fresh || 0;
+
         // Progress appearance depends on number of jobs
         const jobsProgress = ((numOfCompleted + numOfValidation) * 100) / numOfJobs;
 
@@ -218,12 +223,34 @@ class TaskItemComponent extends React.PureComponent<TaskItemProps & RouteCompone
                         <Progress
                             percent={jobsProgress}
                             success={{
-                                percent: (numOfCompleted * 100) / numOfJobs,
+                                percent: (numOfFinished * 100) / numOfJobs,
                             }}
                             strokeColor='#1890FF'
                             showInfo={false}
                             size='small'
                         />
+                        <div>
+                            { numOfFinished > 0 && (
+                                <Text strong className='cvat-task-completed-progress'>
+                                    {`\u2022 ${numOfFinished} completed `}
+                                </Text>
+                            )}
+                            { numOfInProgress > 0 && (
+                                <Text strong className='cvat-task-annotation-progress'>
+                                    {`\u2022 ${numOfInProgress} in progress `}
+                                </Text>
+                            )}
+                            { numOfRejected > 0 && (
+                                <Text strong className='cvat-task-rejected-progress'>
+                                    {`\u2022 ${numOfRejected} rejected `}
+                                </Text>
+                            )}
+                            { numOfNew > 0 && (
+                                <Text strong className='cvat-task-annotation-progress'>
+                                    {`\u2022 ${numOfNew} new `}
+                                </Text>
+                            )}
+                        </div>
                     </Col>
                 </Row>
                 <AutomaticAnnotationProgress

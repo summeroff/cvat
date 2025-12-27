@@ -130,6 +130,57 @@ export function implementJob(Job: typeof JobClass): typeof JobClass {
         },
     });
 
+    Object.defineProperty(Job.prototype.objects, 'implementation', {
+        value: async function objectsImplementation(
+            this: JobClass,
+        ): Promise<{ objects: number; attributes: number; per_label: Record<string, any> }> {
+            const rawAnnotations = await serverProxy.annotations.getAnnotations('job', this.id);
+            const labels: Record<string, {
+                objects: number;
+                attributes: number;
+                true_attributes: number;
+                label_name: string;
+                true_attributes_sums: Record<string, { count: number; name: string }>;
+            }> = {};
+
+            for (const shape of rawAnnotations.shapes) {
+                const labelId = String(shape.label_id);
+                if (!labels[labelId]) {
+                    labels[labelId] = {
+                        objects: 0,
+                        attributes: 0,
+                        true_attributes: 0,
+                        label_name: '',
+                        true_attributes_sums: {},
+                    };
+                }
+                labels[labelId].objects++;
+                labels[labelId].attributes += shape.attributes.length;
+                for (const attribute of shape.attributes) {
+                    const specId = String(attribute.spec_id);
+                    const { value } = attribute;
+                    if (!labels[labelId].true_attributes_sums[specId]) {
+                        labels[labelId].true_attributes_sums[specId] = { count: 0, name: '' };
+                    }
+                    if (value === 'true') {
+                        labels[labelId].true_attributes++;
+                        labels[labelId].true_attributes_sums[specId].count++;
+                    }
+                }
+            }
+
+            const shapesAttributesSum = rawAnnotations.shapes.reduce(
+                (acc: number, shape: any) => acc + shape.attributes.length, 0,
+            );
+
+            return {
+                objects: rawAnnotations.shapes.length,
+                attributes: shapesAttributesSum,
+                per_label: labels,
+            };
+        },
+    });
+
     Object.defineProperty(Job.prototype.openIssue, 'implementation', {
         value: async function openIssueImplementation(
             this: JobClass,

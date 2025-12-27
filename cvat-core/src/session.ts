@@ -741,6 +741,11 @@ export class Job extends Session {
         return result;
     }
 
+    async objects(): Promise<{ objects: number; attributes: number; per_label: Record<string, any> }> {
+        const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.objects);
+        return result;
+    }
+
     async guide(): Promise<AnnotationGuide | null> {
         const result = await PluginRegistry.apiWrapper.call(this, Job.prototype.guide);
         return result;
@@ -802,6 +807,12 @@ export class Task extends Session {
         validationJobs: number,
         annotationJobs: number,
     };
+    public readonly stateProgress: {
+        finished: number,
+        inprogress: number,
+        rejected: number,
+        fresh: number,
+    };
     public readonly jobs: Job[];
     public readonly consensusEnabled: boolean;
 
@@ -857,6 +868,7 @@ export class Task extends Session {
             source_storage: undefined,
             target_storage: undefined,
             progress: undefined,
+            state_progress: undefined,
             labels: undefined,
             jobs: undefined,
 
@@ -895,6 +907,13 @@ export class Task extends Session {
                 (initialData.progress?.count || 0) -
                 (initialData.progress?.validation || 0) -
                 (initialData.progress?.completed || 0),
+        };
+
+        data.state_progress = {
+            finished: initialData.progress?.finished || 0,
+            inprogress: initialData.progress?.inprogress || 0,
+            rejected: initialData.progress?.rejected || 0,
+            fresh: initialData.progress?.fresh || 0,
         };
 
         data.files = Object.freeze({
@@ -1224,6 +1243,9 @@ export class Task extends Session {
                 },
                 progress: {
                     get: () => data.progress,
+                },
+                stateProgress: {
+                    get: () => data.state_progress,
                 },
                 validationMode: {
                     get: () => data.validation_mode,

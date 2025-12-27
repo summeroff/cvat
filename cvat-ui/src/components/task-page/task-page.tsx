@@ -118,9 +118,13 @@ function TaskPageComponent(): JSX.Element {
         })
     );
 
-    const onJobUpdate = (job: Job, data: Parameters<Job['save']>[0]): void => {
-        dispatch(updateJobAsync(job, data));
+    const onRefreshUI = (): void => {
+        setTaskInstance({ ...taskInstance, jobs: [...taskInstance.jobs] });
     };
+
+    const onJobUpdate = (job: Job, data: Parameters<Job['save']>[0]): Promise<void> => (
+        dispatch(updateJobAsync(job, data))
+    );
 
     return (
         <div className='cvat-task-page'>
@@ -139,7 +143,7 @@ function TaskPageComponent(): JSX.Element {
                         cloudStorageInstance={cloudStorageInstance}
                         onUpdateTaskMeta={onUpdateTaskMeta}
                     />
-                    <JobListComponent task={taskInstance} onJobUpdate={onJobUpdate} />
+                    <JobListComponent task={taskInstance} onJobUpdate={onJobUpdate} onRefreshUI={onRefreshUI} />
                 </Col>
             </Row>
             <ModelRunnerModal />

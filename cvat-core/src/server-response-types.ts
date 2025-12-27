@@ -118,6 +118,10 @@ export interface SerializedTask {
         completed: number;
         url: string;
         validation: number;
+        finished: number;
+        inprogress: number;
+        rejected: number;
+        fresh: number;
     };
     labels: { count: number; url: string; };
     mode: TaskMode | '';

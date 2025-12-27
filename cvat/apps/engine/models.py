@@ -592,6 +592,10 @@ class TaskQuerySet(models.QuerySet):
         total_jobs_count = "total_jobs_count"
         completed_jobs_count = "completed_jobs_count"
         validation_jobs_count = "validation_jobs_count"
+        finished_jobs_count = "finished_jobs_count"
+        inprogress_jobs_count = "inprogress_jobs_count"
+        rejected_jobs_count = "rejected_jobs_count"
+        fresh_jobs_count = "fresh_jobs_count"
 
     def with_job_summary(self):
         Fields = self.JobSummaryFields
@@ -607,6 +611,30 @@ class TaskQuerySet(models.QuerySet):
                 Fields.validation_jobs_count.value: models.Count(
                     'segment__job',
                     filter=models.Q(segment__job__stage=StageChoice.VALIDATION.value),
+                    distinct=True,
+                ),
+                Fields.finished_jobs_count.value: models.Count(
+                    'segment__job',
+                    filter=models.Q(segment__job__state=StateChoice.COMPLETED.value) &
+                        models.Q(segment__job__stage=StageChoice.ANNOTATION.value),
+                    distinct=True,
+                ),
+                Fields.inprogress_jobs_count.value: models.Count(
+                    'segment__job',
+                    filter=models.Q(segment__job__state=StateChoice.IN_PROGRESS.value) &
+                        models.Q(segment__job__stage=StageChoice.ANNOTATION.value),
+                    distinct=True,
+                ),
+                Fields.rejected_jobs_count.value: models.Count(
+                    'segment__job',
+                    filter=models.Q(segment__job__state=StateChoice.REJECTED.value) &
+                        models.Q(segment__job__stage=StageChoice.ANNOTATION.value),
+                    distinct=True,
+                ),
+                Fields.fresh_jobs_count.value: models.Count(
+                    'segment__job',
+                    filter=models.Q(segment__job__state=StateChoice.NEW.value) &
+                        models.Q(segment__job__stage=StageChoice.ANNOTATION.value),
                     distinct=True,
                 ),
             }
@@ -679,6 +707,34 @@ class Task(TimestampedModel, AssignableModel, FileSystemRelatedModel):
 
     @cached_property
     def validation_jobs_count(self) -> int | None:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+
+    @cached_property
+    def finished_jobs_count(self) -> int | None:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+
+    @cached_property
+    def inprogress_jobs_count(self) -> int | None:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+
+    @cached_property
+    def rejected_jobs_count(self) -> int | None:
+        # Requires this field to be defined externally,
+        # e.g. by calling Task.objects.with_job_summary,
+        # to avoid unexpected DB queries on access.
+        return None
+
+    @cached_property
+    def fresh_jobs_count(self) -> int | None:
         # Requires this field to be defined externally,
         # e.g. by calling Task.objects.with_job_summary,
         # to avoid unexpected DB queries on access.

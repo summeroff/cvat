@@ -13,10 +13,13 @@ import { Row, Col } from 'antd/lib/grid';
 import Text from 'antd/lib/typography/Text';
 import Pagination from 'antd/lib/pagination';
 import Empty from 'antd/lib/empty';
+import notification from 'antd/lib/notification';
 import Button from 'antd/lib/button';
-import { PlusOutlined } from '@ant-design/icons';
-import { Task, Job } from 'cvat-core-wrapper';
-import JobItem from 'components/job-item/job-item';
+import copy from 'copy-to-clipboard';
+import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
+import { Task, Job, getCore, JobStage } from 'cvat-core-wrapper';
+import CVATTooltip from 'components/common/cvat-tooltip';
+import JobItem, { JobData } from 'components/job-item/job-item';
 import {
     SortingComponent, ResourceFilterHOC, defaultVisibility, updateHistoryFromQuery, ResourceSelectionInfo,
 } from 'components/resource-sorting-filtering';
@@ -33,7 +36,8 @@ const FilteringComponent = ResourceFilterHOC(
 
 interface Props {
     task: Task;
-    onJobUpdate(job: Job, data: Parameters<Job['save']>[0]): void;
+    onJobUpdate(job: Job, data: Parameters<Job['save']>[0]): Promise<void>;
+    onRefreshUI(): void;
 }
 
 function filterJobs(jobs: Job[], query: JobsQuery): Job[] {
@@ -74,7 +78,7 @@ function setUpJobsList(jobs: Job[], newPage: number, pageSize: number): Job[] {
 }
 
 function JobListComponent(props: Readonly<Props>): JSX.Element {
-    const { task: taskInstance, onJobUpdate } = props;
+    const { task: taskInstance, onJobUpdate, onRefreshUI } = props;
     const [visibility, setVisibility] = useState(defaultVisibility);
 
     const history = useHistory();
@@ -131,6 +135,33 @@ function JobListComponent(props: Readonly<Props>): JSX.Element {
         });
     }, []);
 
+    const [jobDataArray, setJobDataArray] = useState<JobData[]>([]);
+
+    const addObject = useCallback((newData: JobData) => {
+        setJobDataArray((prevData) => [...prevData, newData]);
+    }, []);
+
+    const renewAllJobs = useCallback(async (): Promise<void> => {
+        const core = getCore();
+        const updateData = { state: core.enums.JobState.NEW, stage: JobStage.ANNOTATION };
+        const promises = taskInstance.jobs.map((job: Job) => {
+            if (job.state !== core.enums.JobState.NEW || job.stage !== JobStage.ANNOTATION) {
+                return onJobUpdate(job, updateData);
+            }
+            return Promise.resolve();
+        });
+
+        try {
+            await Promise.all(promises);
+            onRefreshUI();
+        } catch (error: unknown) {
+            notification.error({
+                message: 'Failed to renew all jobs',
+                description: String(error),
+            });
+        }
+    }, [taskInstance, onJobUpdate, onRefreshUI]);
+
     const [query, setQuery] = useState<JobsQuery>(updatedQuery);
     const filteredJobs = filterJobs(jobs, query);
     const jobIds = filteredJobs.map((job) => job.id);
@@ -162,6 +193,185 @@ function JobListComponent(props: Readonly<Props>): JSX.Element {
                     <Col>
                         <Text className='cvat-text-color cvat-jobs-header'> Jobs </Text>
                         <ResourceSelectionInfo selectedCount={selectedCount} onSelectAll={onSelectAll} />
+                    </Col>
+                    <Col>
+                        <CVATTooltip trigger='click' title='Copied to clipboard!'>
+                            <Button
+                                className='cvat-copy-job-details-button'
+                                type='link'
+                                onClick={(): void => {
+                                    let serialized = '';
+                                    const [latestJob] = [...taskInstance.jobs].reverse();
+                                    for (const job of taskInstance.jobs) {
+                                        const baseURL = window.location.origin;
+                                        serialized += `Job #${job.id}`.padEnd(`${latestJob.id}`.length + 6, ' ');
+                                        serialized += `: ${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`.padEnd(
+                                            `${latestJob.id}`.length + baseURL.length + 8,
+                                            ' ',
+                                        );
+                                        serialized += `: [${job.startFrame}-${job.stopFrame}]`.padEnd(
+                                            `${latestJob.startFrame}${latestJob.stopFrame}`.length + 5,
+                                            ' ',
+                                        );
+
+                                        if (job.assignee) {
+                                            serialized += `\t assigned to "${job.assignee.username}"`;
+                                        }
+
+                                        serialized += '\n';
+                                    }
+                                    copy(serialized);
+                                }}
+                            >
+                                <CopyOutlined />
+                                Copy
+                            </Button>
+                        </CVATTooltip>
+                    </Col>
+                    <Col>
+                        <CVATTooltip trigger='click' title='Copied to clipboard!'>
+                            <Button
+                                className='cvat-copy-job-details-button'
+                                type='link'
+                                onClick={(): void => {
+                                    let header1 = 'Job ID,URL,Frame Range,Assignee,Objects,Attributes';
+                                    let header2 = ',,,,,';
+                                    const [latestJob] = [...taskInstance.jobs].reverse();
+
+                                    const assigneeTotals: { [key: string]: number[] } = {};
+
+                                    if (latestJob) {
+                                        const latestJobData = jobDataArray.find(
+                                            (data: JobData) => data.jobId === latestJob.id,
+                                        );
+                                        if (latestJobData) {
+                                            for (const label in latestJobData.attributesPerLabel) {
+                                                if (Object.prototype.hasOwnProperty.call(
+                                                    latestJobData.attributesPerLabel, label,
+                                                )) {
+                                                    const labelName = latestJobData.attributesPerLabel[label]
+                                                        .label_name;
+                                                    header1 += `,${labelName},,`;
+                                                    header2 += ',Obj,Attr,Attr+';
+
+                                                    for (const attrKey in latestJobData.attributesPerLabel[label]
+                                                        .true_attributes_sums) {
+                                                        if (Object.prototype.hasOwnProperty.call(
+                                                            latestJobData.attributesPerLabel[label]
+                                                                .true_attributes_sums, attrKey,
+                                                        )) {
+                                                            const attrName = latestJobData.attributesPerLabel[label]
+                                                                .true_attributes_sums[attrKey].name;
+                                                            header2 += `,${attrName}`;
+                                                            header1 += ',';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    let serialized = `${header1}\n${header2}\n`;
+                                    const totalJobs = new Array(header2.split(',').length - 4).fill(0);
+
+                                    for (const job of taskInstance.jobs) {
+                                        const baseURL = window.location.origin;
+                                        const jobID = `Job #${job.id}`;
+                                        const url = `${baseURL}/tasks/${taskInstance.id}/jobs/${job.id}`;
+                                        const frameRange = `[${job.startFrame}-${job.stopFrame}]`;
+                                        const assignee = job.assignee ? `"${job.assignee.username}"` : 'none';
+
+                                        const jobData = jobDataArray.find((data: JobData) => data.jobId === job.id);
+                                        const objectsCount = jobData ? jobData.objectsCount : 0;
+                                        const attributesCount = jobData ? jobData.attributesCount : 0;
+
+                                        let jobDataStr = `${jobID},${url},${frameRange},${assignee},` +
+                                            `${objectsCount},${attributesCount}`;
+
+                                        if (!assigneeTotals[assignee]) {
+                                            assigneeTotals[assignee] = new Array(
+                                                header2.split(',').length - 4,
+                                            ).fill(0);
+                                        }
+                                        assigneeTotals[assignee][0] += objectsCount;
+                                        assigneeTotals[assignee][1] += attributesCount;
+
+                                        if (jobData) {
+                                            let i = 2;
+                                            for (const label in jobData.attributesPerLabel) {
+                                                if (Object.prototype.hasOwnProperty.call(
+                                                    jobData.attributesPerLabel, label,
+                                                )) {
+                                                    const labelData = jobData.attributesPerLabel[label];
+                                                    jobDataStr += `,${labelData.objects},${labelData.attributes},` +
+                                                        `${labelData.true_attributes}`;
+                                                    assigneeTotals[assignee][i] += labelData.objects;
+                                                    assigneeTotals[assignee][i + 1] += labelData.attributes;
+                                                    assigneeTotals[assignee][i + 2] += labelData.true_attributes;
+
+                                                    let attributeIndex = i + 3;
+                                                    for (const attrKey in labelData.true_attributes_sums) {
+                                                        if (Object.prototype.hasOwnProperty.call(
+                                                            labelData.true_attributes_sums, attrKey,
+                                                        )) {
+                                                            const attrCount = labelData.true_attributes_sums[attrKey]
+                                                                .count;
+                                                            jobDataStr += `,${attrCount}`;
+                                                            if (assigneeTotals[assignee][attributeIndex] === undefined) {
+                                                                assigneeTotals[assignee][attributeIndex] = 0;
+                                                            }
+                                                            assigneeTotals[assignee][attributeIndex] += attrCount;
+                                                            attributeIndex += 1;
+                                                        }
+                                                    }
+                                                    i = attributeIndex;
+                                                }
+                                            }
+                                        }
+
+                                        serialized += `${jobDataStr}\n`;
+                                    }
+
+                                    for (const assignee in assigneeTotals) {
+                                        if (Object.prototype.hasOwnProperty.call(assigneeTotals, assignee)) {
+                                            const totalRow = [, , , assignee]
+                                                .concat(assigneeTotals[assignee].map(String)).join(',');
+                                            serialized += `${totalRow}\n`;
+                                        }
+                                    }
+
+                                    for (const assignee in assigneeTotals) {
+                                        if (Object.prototype.hasOwnProperty.call(assigneeTotals, assignee)) {
+                                            for (let j = 0; j < assigneeTotals[assignee].length; j++) {
+                                                totalJobs[j] = (totalJobs[j] || 0) +
+                                                    (assigneeTotals[assignee][j] || 0);
+                                            }
+                                        }
+                                    }
+
+                                    const totalJobsRow = [, , , 'All Jobs']
+                                        .concat(totalJobs.map(String)).join(',');
+                                    serialized += `${totalJobsRow}\n`;
+
+                                    copy(serialized);
+                                }}
+                            >
+                                <CopyOutlined />
+                                Info
+                            </Button>
+                        </CVATTooltip>
+                    </Col>
+                    <Col>
+                        <CVATTooltip trigger='click' title='All Jobs to annotation/new!'>
+                            <Button
+                                className='cvat-copy-job-stage-button'
+                                type='link'
+                                onClick={renewAllJobs}
+                            >
+                                <CopyOutlined />
+                                Renew All Jobs
+                            </Button>
+                        </CVATTooltip>
                     </Col>
                 </Row>
                 <Row>
@@ -228,6 +438,8 @@ function JobListComponent(props: Readonly<Props>): JSX.Element {
                                                 onCollapseChange={onCollapseChange}
                                                 selected={selected}
                                                 onClick={onClick}
+                                                jobDataArray={jobDataArray}
+                                                addObject={addObject}
                                             />
                                         );
                                     })
