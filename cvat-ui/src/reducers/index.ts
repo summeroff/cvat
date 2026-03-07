@@ -301,7 +301,6 @@ export interface BulkActionsState {
 
 export enum SupportedPlugins {
     ANALYTICS = 'ANALYTICS',
-    MODELS = 'MODELS',
 }
 
 export type PluginsList = {
@@ -789,6 +788,7 @@ export enum StatesOrdering {
     ID_ASCENT = 'ID - ascent',
     UPDATED = 'Updated time',
     Z_ORDER = 'Z Order',
+    LABEL_NAME = 'Label name',
 }
 
 export enum ContextMenuType {

@@ -24,6 +24,7 @@ import { Canvas3d } from 'cvat-canvas3d-wrapper';
 import {
     AnnotationConflict, ObjectState, ObjectType, ShapeType, QualityConflict, getCore,
 } from 'cvat-core-wrapper';
+import { scrollAndExpandState } from 'utils/objects-sidebar';
 import config from 'config';
 import CVATTooltip from 'components/common/cvat-tooltip';
 import FrameTags from 'components/annotation-page/tag-annotation-workspace/frame-tags';
@@ -46,6 +47,7 @@ import {
     getDataFailed,
     canvasErrorOccurred,
     updateEditedStateAsync,
+    collapseObjectItems,
 } from 'actions/annotation-actions';
 import {
     switchGrid,
@@ -135,6 +137,7 @@ interface DispatchToProps {
     onJoinAnnotations(states: ObjectState[], points: number[]): void;
     onSliceAnnotations(state: ObjectState, results: number[][]): void;
     onActivateObject: (activatedStateID: number | null, activatedElementID: number | null) => void;
+    onExpandObject(objectState: ObjectState): void;
     onAddZLayer(): void;
     onSwitchZLayer(cur: number): void;
     onChangeBrightnessLevel(level: number): void;
@@ -273,6 +276,18 @@ const componentShortcuts = {
         sequences: ['ctrl+a'],
         scope: ShortcutScope.STANDARD_WORKSPACE,
     },
+    NEXT_OBJECT: {
+        name: 'Next object',
+        description: 'Go to the next object and center it on the canvas',
+        sequences: ['tab'],
+        scope: ShortcutScope.ANNOTATION_PAGE,
+    },
+    PREVIOUS_OBJECT: {
+        name: 'Previous object',
+        description: 'Go to the previous object and center it on the canvas',
+        sequences: ['shift+tab'],
+        scope: ShortcutScope.ANNOTATION_PAGE,
+    },
 };
 
 registerComponentShortcuts(componentShortcuts);
@@ -315,6 +330,9 @@ function mapDispatchToProps(dispatch: any): DispatchToProps {
             }
 
             dispatch(activateObject(activatedStateID, activatedElementID, null));
+        },
+        onExpandObject(objectState: ObjectState): void {
+            dispatch(collapseObjectItems([objectState], false));
         },
         onAddZLayer(): void {
             dispatch(addZLayer());
@@ -373,7 +391,6 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
             adaptiveZoom,
             intelligentPolygonCrop,
             showObjectsTextAlways,
-            workspace,
             showProjections,
             selectedOpacity,
             opacity,
@@ -397,7 +414,6 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
         wrapper.appendChild(canvasInstance.html());
 
         canvasInstance.configure({
-            forceDisableEditing: workspace === Workspace.REVIEW,
             undefinedAttrValue: config.UNDEFINED_ATTRIBUTE_VALUE,
             displayAllText: showObjectsTextAlways,
             autoborders: automaticBordering,
@@ -443,7 +459,6 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
             brightnessLevel,
             contrastLevel,
             saturationLevel,
-            workspace,
             showObjectsTextAlways,
             textFontSize,
             controlPointsSize,
@@ -583,18 +598,6 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
             if (prevProps.frameData === frameData) {
                 // explicitly rotated, not a new frame
                 canvasInstance.fit();
-            }
-        }
-
-        if (prevProps.workspace !== workspace) {
-            if (workspace === Workspace.REVIEW) {
-                canvasInstance.configure({
-                    forceDisableEditing: true,
-                });
-            } else if (prevProps.workspace === Workspace.REVIEW) {
-                canvasInstance.configure({
-                    forceDisableEditing: false,
-                });
             }
         }
 
@@ -805,17 +808,8 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
     };
 
     private onCanvasShapeClicked = (e: any): void => {
-        const { clientID, parentID } = e.detail.state;
-        let sidebarItem = null;
-        if (Number.isInteger(parentID)) {
-            sidebarItem = window.document.getElementById(`cvat-objects-sidebar-state-item-element-${clientID}`);
-        } else {
-            sidebarItem = window.document.getElementById(`cvat-objects-sidebar-state-item-${clientID}`);
-        }
-
-        if (sidebarItem) {
-            sidebarItem.scrollIntoView();
-        }
+        const { onExpandObject } = this.props;
+        scrollAndExpandState(e.detail.state, onExpandObject);
     };
 
     private onCanvasShapeDeactivated = (e: any): void => {
@@ -1111,14 +1105,43 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
             automaticBordering,
             showTagsOnFrame,
             canvasIsReady,
+            annotations,
+            activatedStateID,
+            focusedObjectPadding,
             onSwitchAutomaticBordering,
             onSwitchZLayer,
             onAddZLayer,
+            onActivateObject,
+            onExpandObject,
         } = this.props;
+        const { canvasInstance } = this.props as { canvasInstance: Canvas };
 
         const preventDefault = (event: KeyboardEvent | undefined): void => {
             if (event) {
                 event.preventDefault();
+            }
+        };
+
+        const navigateObject = (step: number): void => {
+            const filteredStates = annotations.filter(
+                (state) => !state.outside && !state.hidden && state.zOrder <= curZLayer,
+            );
+            if (filteredStates.length) {
+                const currentIndex = filteredStates.findIndex((state) => state.clientID === activatedStateID);
+                let nextIndex = currentIndex + step;
+                if (nextIndex > filteredStates.length - 1) {
+                    nextIndex = 0;
+                } else if (nextIndex < 0) {
+                    nextIndex = filteredStates.length - 1;
+                }
+                const nextState = filteredStates[nextIndex];
+                if (nextState && nextState.clientID !== null && nextState.clientID !== activatedStateID) {
+                    onActivateObject(nextState.clientID, null);
+                    if (nextState.objectType !== ObjectType.TAG && canvasInstance) {
+                        canvasInstance.focus(nextState.clientID, focusedObjectPadding);
+                    }
+                    scrollAndExpandState(nextState, onExpandObject);
+                }
             }
         };
 
@@ -1128,6 +1151,14 @@ class CanvasWrapperComponent extends React.PureComponent<Props> {
                     preventDefault(event);
                     onSwitchAutomaticBordering(!automaticBordering);
                 }
+            },
+            NEXT_OBJECT: (event: KeyboardEvent | undefined) => {
+                preventDefault(event);
+                navigateObject(1);
+            },
+            PREVIOUS_OBJECT: (event: KeyboardEvent | undefined) => {
+                preventDefault(event);
+                navigateObject(-1);
             },
         };
 
