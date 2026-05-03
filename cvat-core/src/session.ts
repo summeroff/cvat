@@ -359,7 +359,7 @@ export class Session {
         merge: (objectStates: ObjectState[]) => Promise<void>;
         split: (objectState: ObjectState, frame: number) => Promise<void>;
         group: (objectStates: ObjectState[], reset: boolean) => Promise<number>;
-        join: (objectStates: ObjectState[], points: number[]) => Promise<void>;
+        join: (objectStates: ObjectState[], points: number[][]) => Promise<void>;
         slice: (state: ObjectState, results: number[][]) => Promise<void>;
         clear: (options?: {
             reload?: boolean;
@@ -844,6 +844,7 @@ export class Task extends Session {
     public readonly validationFramesPercent: number;
     public readonly validationFramesPerJobPercent: number;
     public readonly frameSelectionMethod: string;
+    public readonly _updateTrigger: FieldUpdateTrigger;
 
     public meta: {
         get: () => Promise<FramesMetaData>;
@@ -895,7 +896,6 @@ export class Task extends Session {
             use_cache: undefined,
             copy_data: undefined,
             sorting_method: undefined,
-            files: undefined,
             consensus_enabled: undefined,
 
             validation_mode: null,
@@ -1039,7 +1039,7 @@ export class Task extends Session {
                     get: () => data.assignee,
                     set: (assignee) => {
                         if (assignee !== null && !(assignee instanceof User)) {
-                            throw new ArgumentError('Value must be a user instance');
+                            throw new ArgumentError('Value must be a user instance or null');
                         }
                         updateTrigger.update('assignee');
                         data.assignee = assignee;
@@ -1147,66 +1147,6 @@ export class Task extends Session {
                 jobs: {
                     get: () => [...(data.jobs || [])],
                 },
-                serverFiles: {
-                    get: () => [...data.files.server_files],
-                    set: (serverFiles) => {
-                        if (!Array.isArray(serverFiles)) {
-                            throw new ArgumentError(
-                                `Value must be an array. But ${typeof serverFiles} has been got.`,
-                            );
-                        }
-
-                        for (const value of serverFiles) {
-                            if (typeof value !== 'string') {
-                                throw new ArgumentError(
-                                    `Array values must be a string. But ${typeof value} has been got.`,
-                                );
-                            }
-                        }
-
-                        Array.prototype.push.apply(data.files.server_files, serverFiles);
-                    },
-                },
-                clientFiles: {
-                    get: () => [...data.files.client_files],
-                    set: (clientFiles) => {
-                        if (!Array.isArray(clientFiles)) {
-                            throw new ArgumentError(
-                                `Value must be an array. But ${typeof clientFiles} has been got.`,
-                            );
-                        }
-
-                        for (const value of clientFiles) {
-                            if (!(value instanceof File)) {
-                                throw new ArgumentError(
-                                    'Array values must be a File.',
-                                );
-                            }
-                        }
-
-                        Array.prototype.push.apply(data.files.client_files, clientFiles);
-                    },
-                },
-                remoteFiles: {
-                    get: () => [...data.files.remote_files],
-                    set: (remoteFiles) => {
-                        if (!Array.isArray(remoteFiles)) {
-                            throw new ArgumentError(
-                                `Value must be an array. But ${typeof remoteFiles} has been got.`,
-                            );
-                        }
-
-                        for (const value of remoteFiles) {
-                            if (typeof value !== 'string') {
-                                throw new ArgumentError(
-                                    `Array values must be a string. But ${typeof value} has been got.`,
-                                );
-                            }
-                        }
-
-                        Array.prototype.push.apply(data.files.remote_files, remoteFiles);
-                    },
-                },
                 frameFilter: {
                     get: () => data.frame_filter,
                 },
@@ -1292,7 +1232,12 @@ export class Task extends Session {
     }
 
     async save(
-        fields: Record<string, any> = {},
+        fields?: {
+            [index: string]: any;
+            clientFiles?: File[];
+            serverFiles?: string[];
+            remoteFiles?: string[];
+        },
         options?: { updateStatusCallback?: (updateData: Request | UpdateStatusData) => void },
     ): Promise<Task> {
         const result = await PluginRegistry.apiWrapper.call(this, Task.prototype.save, fields, options);
